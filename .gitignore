@@ -1,0 +1,27 @@
+# Binaries and build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+dist/
+bin/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Go
+go.sum
+
+# Config overrides (user-specific)
+config.yaml.local
+config.local.yaml
+
+# Temporary files
+*.tmp
+*.temp
+.temp/

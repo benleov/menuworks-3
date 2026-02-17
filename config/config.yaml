@@ -1,0 +1,58 @@
+title: "MenuWorks 2.0"
+
+items:
+  - type: submenu
+    label: "System Tools"
+    hotkey: "S"
+    target: "system"
+
+  - type: submenu
+    label: "Utilities"
+    hotkey: "U"
+    target: "utils"
+
+  - type: separator
+
+  - type: back
+    label: "Quit"
+
+menus:
+  system:
+    title: "System Tools"
+    items:
+      - type: command
+        label: "Show Date/Time"
+        hotkey: "D"
+        exec:
+          command: "echo Current date is %DATE% %TIME%"
+
+      - type: command
+        label: "Show Environment"
+        hotkey: "E"
+        exec:
+          command: "echo User: %USERNAME%"
+
+      - type: separator
+
+      - type: back
+        label: "Back"
+
+  utils:
+    title: "Utilities"
+    items:
+      - type: command
+        label: "Echo Test"
+        hotkey: "E"
+        exec:
+          command: "echo Hello from MenuWorks!"
+
+      - type: command
+        label: "List System Info"
+        hotkey: "L"
+        exec:
+          command: "echo This is a utility command"
+
+      - type: separator
+
+      - type: back
+        label: "Back"
