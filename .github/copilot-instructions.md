@@ -4,6 +4,7 @@
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is built on windows; the `head` command is not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version 1.0.0` on windows.
+- **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
 ## Project Goal
 Build a **single self‑contained Go binary** for **Windows, Linux, and macOS** that replicates the core functionality and user experience of **MenuWorks 2.10**, with a recognisable 1988 DOS aesthetic.  
 The UI should be retro, clean, responsive, and centered around **hierarchical menus** and **menu chaining**.
@@ -229,6 +230,62 @@ The embedded default config in `/assets/` should contain:
 - Avoid unnecessary abstractions.
 - Rendering must be deterministic and flicker‑free.
 - Use clear, readable names for menu navigation logic.
+
+## Event Handling & Concurrency Guidelines
+
+**Critical architectural patterns to prevent event-related bugs:**
+
+### Single Event Source Pattern
+- **Rule:** Establish ONE event poller goroutine immediately after screen initialization.
+- **Implementation:** Use `StartEventPoller()` that returns a channel, started once in `main()`.
+- **Rationale:** tcell's `PollEvent()` is blocking and cannot be safely called from multiple places. Splitting event consumption between direct calls and channels causes race conditions and lost events.
+
+### Event Poller Initialization Timing
+- **Rule:** Start event poller IMMEDIATELY after `screen.Init()`, before any other function that might need events.
+- **Wrong:** Starting poller after config load, terminal size check, or splash screen.
+- **Right:** Start poller as second step after screen creation, pass channel to all functions that need events.
+- **Why:** Functions like `ensureTerminalSize()`, `handleConfigError()`, and splash screen event drain all need the event channel. Starting late causes hangs.
+
+### Goroutine Leak Prevention
+- **Anti-pattern:** Creating new goroutines in functions called repeatedly (loops, event handlers).
+- **Example of leak:** 
+  ```go
+  func PollEventWithTimeout(timeout time.Duration) tcell.Event {
+      eventChan := make(chan tcell.Event, 1)
+      go func() { eventChan <- s.PollEvent() }() // LEAK: goroutine never cleaned up on timeout
+      select {
+      case ev := <-eventChan: return ev
+      case <-time.After(timeout): return nil // orphaned goroutine still blocking on PollEvent
+      }
+  }
+  ```
+- **Fix:** Use a single long-lived goroutine created once, or ensure goroutines are properly cleaned up with context cancellation.
+
+### Platform-Specific Event Queue Behavior
+- **macOS/Linux:** Terminals generate startup events (SIGWINCH resize, focus events) when tcell initializes. These MUST be consumed or they corrupt the event queue.
+- **Windows:** Console API typically does not generate startup events; event queue starts clean.
+- **Solution:** During splash screen, continuously drain events from the channel for 400ms. This is harmless on Windows (no events to drain) and critical on macOS (prevents hang).
+- **Implementation:** 
+  ```go
+  splashStart := time.Now()
+  for time.Since(splashStart) < 400*time.Millisecond {
+      select {
+      case <-eventChan: // Discard any startup events
+      case <-time.After(10 * time.Millisecond):
+      }
+  }
+  ```
+
+### Consistent Event Channel Usage
+- **Rule:** Once event poller starts, ALL event polling must use the channel. Never mix direct `PollEvent()` calls with channel-based polling.
+- **Pass eventChan to:** All dialogs, resize handlers, event loops, any function that waits for user input.
+- **Function signatures:** Update all dialog/handler functions to accept `eventChan <-chan tcell.Event` parameter.
+- **Verification:** Search codebase for `PollEvent()` calls after event poller starts—there should be zero except inside `StartEventPoller()` itself.
+
+### Testing Across Platforms
+- **Always test on macOS when making event handling changes**—Windows may work while macOS hangs due to different event queue initialization.
+- If Windows works but macOS hangs, suspect event consumption issue (startup events not drained).
+- If both platforms hang after changes, suspect goroutine leak or deadlock.
 
 ## Non‑Goals
 - No mouse support.
