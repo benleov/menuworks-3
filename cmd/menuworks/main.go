@@ -308,8 +308,11 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 				showOutput = *item.ShowOutput
 			}
 
+			// Get the command for the current OS
+			command := item.Exec.CommandForOS(exec.GetOS())
+
 			// Execute command and capture output
-			output := exec.ExecuteAndCapture(item.Exec.Command, item.Exec.WorkDir)
+			output := exec.ExecuteAndCapture(command, item.Exec.WorkDir)
 
 			if showOutput && output != "" {
 				// Display output in scrollable viewer

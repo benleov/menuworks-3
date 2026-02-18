@@ -32,7 +32,7 @@ func TestValidateErrors(t *testing.T) {
 
 	expected := []string{
 		"command missing label",
-		"command missing exec.command",
+		"command missing exec variant",
 		"submenu missing target",
 		"separator must not have label or hotkey",
 		"unknown type",
@@ -75,5 +75,43 @@ func TestValidateMissingTargetWithMenusIgnored(t *testing.T) {
 	errs := Validate(cfg)
 	if len(errs) != 0 {
 		t.Fatalf("expected no errors, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestCommandForOS(t *testing.T) {
+	exec := ExecConfig{
+		Windows: "echo Hello from Windows",
+		Linux:   "echo Hello from Linux",
+		Mac:     "echo Hello from macOS",
+	}
+
+	tests := []struct {
+		os       string
+		expected string
+	}{
+		{"windows", "echo Hello from Windows"},
+		{"linux", "echo Hello from Linux"},
+		{"darwin", "echo Hello from macOS"},
+		{"unknown", ""},
+	}
+
+	for _, tt := range tests {
+		result := exec.CommandForOS(tt.os)
+		if result != tt.expected {
+			t.Errorf("CommandForOS(%s): expected %q, got %q", tt.os, tt.expected, result)
+		}
+	}
+}
+
+func TestCommandForOSFallbackEmpty(t *testing.T) {
+	exec := ExecConfig{
+		Windows: "echo Windows only",
+		Linux:   "",
+		Mac:     "",
+	}
+
+	result := exec.CommandForOS("linux")
+	if result != "" {
+		t.Errorf("CommandForOS(linux) with empty variant: expected empty string, got %q", result)
 	}
 }

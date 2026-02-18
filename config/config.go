@@ -22,10 +22,26 @@ type MenuItem struct {
 	ShowOutput *bool       `yaml:"showOutput,omitempty"` // for command type (default: true)
 }
 
-// ExecConfig holds command execution details
+// ExecConfig holds command execution details with OS-specific variants
 type ExecConfig struct {
-	Command string `yaml:"command"`
+	Windows string `yaml:"windows,omitempty"`
+	Linux   string `yaml:"linux,omitempty"`
+	Mac     string `yaml:"mac,omitempty"`
 	WorkDir string `yaml:"workdir,omitempty"`
+}
+
+// CommandForOS returns the command for the given OS, or empty string if not defined
+func (ec ExecConfig) CommandForOS(osType string) string {
+	switch osType {
+	case "windows":
+		return ec.Windows
+	case "linux":
+		return ec.Linux
+	case "darwin":
+		return ec.Mac
+	default:
+		return ""
+	}
 }
 
 // Menu represents a menu with a title and list of items
@@ -121,8 +137,8 @@ func validateItem(item MenuItem, index int, cfg *Config) []string {
 		if item.Label == "" {
 			errs = append(errs, fmt.Sprintf("item %d: command missing label", index))
 		}
-		if item.Exec.Command == "" {
-			errs = append(errs, fmt.Sprintf("item %d: command missing exec.command", index))
+		if item.Exec.Windows == "" && item.Exec.Linux == "" && item.Exec.Mac == "" {
+			errs = append(errs, fmt.Sprintf("item %d: command missing exec variant (windows, linux, or mac)", index))
 		}
 	case "submenu":
 		if item.Label == "" {

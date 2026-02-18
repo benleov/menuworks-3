@@ -76,10 +76,13 @@ items:
     target: "system"      # Menu name to open
 
   - type: command
-    label: "List Files"
-    hotkey: "L"
+    label: "Show Date"
+    hotkey: "D"
     exec:
-      command: "ls -la"   # Shell command (cross-platform: Windows cmd.exe or sh)
+      windows: "echo Current date is %DATE%"  # Windows command
+      linux: "date"                            # Linux command
+      mac: "date"                              # macOS command
+    showOutput: false   # disable output from command (e.g for app links)
 
   - type: separator       # Visual divider (no label or hotkey)
 
@@ -91,9 +94,11 @@ menus:
     title: "System Tools"
     items:
       - type: command
-        label: "Show Date"
+        label: "List Files"
         exec:
-          command: "date"
+          windows: "dir"
+          linux: "ls -la"
+          mac: "ls -la"
       
       - type: back
         label: "Back"
@@ -103,10 +108,33 @@ menus:
 
 | Type | Purpose | Fields |
 |------|---------|--------|
-| `command` | Run shell command | `label`, `exec.command`, `hotkey` (optional), `showOutput` (optional) |
+| `command` | Run shell command | `label`, `exec` (OS variants), `hotkey` (optional), `showOutput` (optional) |
 | `submenu` | Open another menu | `label`, `target` (menu name), `hotkey` (optional) |
 | `back` | Return to parent (or quit if root) | `label` |
 | `separator` | Visual divider | *(no other fields)* |
+
+### Cross-Platform Command Execution
+
+MenuWorks supports **OS-specific commands** via the `exec` field. Each command item must define variants for the operating systems you want to support:
+
+```yaml
+- type: command
+  label: "Show System Info"
+  exec:
+    windows: "systeminfo"
+    linux: "uname -a"
+    mac: "uname -a"
+```
+
+**Behavior:**
+- If the current OS has a defined variant, that command executes
+- If the current OS variant is missing, the item appears **disabled** (dimmed) in the menu
+- At least one OS variant must be defined for each command
+
+**Supported OS identifiers:**
+- `windows` — Windows (cmd.exe)
+- `linux` — Linux (sh)
+- `mac` — macOS (sh)
 
 ### Hotkeys
 
@@ -157,7 +185,7 @@ By default, all commands display their output in a scrollable full-screen viewer
 
 ## Examples
 
-### Example 1: Simple Admin Menu
+### Example 1: Simple Admin Menu (Cross-Platform)
 
 ```yaml
 title: "Admin Panel"
@@ -183,13 +211,17 @@ menus:
       - type: command
         label: "Disk Usage"
         exec:
-          command: "df -h"
+          windows: "wmic logicaldisk get name,size,freespace"
+          linux: "df -h"
+          mac: "df -h"
         showOutput: true  # Default - show output in viewer
       
       - type: command
         label: "Processes"
         exec:
-          command: "ps aux"
+          windows: "tasklist"
+          linux: "ps aux"
+          mac: "ps aux"
       
       - type: back
         label: "Back"
@@ -200,7 +232,9 @@ menus:
       - type: command
         label: "Ping Google"
         exec:
-          command: "ping -c 1 8.8.8.8"
+          windows: "ping 8.8.8.8 -n 1"
+          linux: "ping -c 1 8.8.8.8"
+          mac: "ping -c 1 8.8.8.8"
       
       - type: back
         label: "Back"
@@ -227,12 +261,16 @@ menus:
       - type: command
         label: "Build Project"
         exec:
-          command: "cargo build --release"
+          windows: "cargo build --release"
+          linux: "cargo build --release"
+          mac: "cargo build --release"
       
       - type: command
         label: "Deploy to Staging"
         exec:
-          command: "./scripts/deploy-staging.sh"
+          windows: ".\\scripts\\deploy-staging.bat"
+          linux: "./scripts/deploy-staging.sh"
+          mac: "./scripts/deploy-staging.sh"
       
       - type: back
         label: "Back"
@@ -243,12 +281,16 @@ menus:
       - type: command
         label: "Run Unit Tests"
         exec:
-          command: "cargo test"
+          windows: "cargo test"
+          linux: "cargo test"
+          mac: "cargo test"
       
       - type: command
         label: "Run Integration Tests"
         exec:
-          command: "cargo test --test '*'"
+          windows: "cargo test --test '*'"
+          linux: "cargo test --test '*'"
+          mac: "cargo test --test '*'"
       
       - type: back
         label: "Back"

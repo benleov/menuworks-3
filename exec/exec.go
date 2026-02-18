@@ -13,6 +13,20 @@ import (
 	"github.com/benworks/menuworks/ui"
 )
 
+// GetOS returns the current OS type string
+func GetOS() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "windows"
+	case "linux":
+		return "linux"
+	case "darwin":
+		return "darwin"
+	default:
+		return runtime.GOOS
+	}
+}
+
 // Execute runs a command using the platform-appropriate shell
 func Execute(command, workDir string) error {
 	var cmd *exec.Cmd

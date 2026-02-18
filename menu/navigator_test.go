@@ -10,10 +10,10 @@ func TestHotkeyAutoAssignment(t *testing.T) {
 	cfg := &config.Config{
 		Title: "Root",
 		Items: []config.MenuItem{
-			{Type: "command", Label: "Save File", Exec: config.ExecConfig{Command: "echo"}},
-			{Type: "command", Label: "Settings", Exec: config.ExecConfig{Command: "echo"}},
+			{Type: "command", Label: "Save File", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Settings", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
 			{Type: "separator"},
-			{Type: "command", Label: ">>>", Exec: config.ExecConfig{Command: "echo"}},
+			{Type: "command", Label: ">>>", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
 		},
 	}
 
@@ -43,5 +43,39 @@ func TestHotkeyDisabledSubmenu(t *testing.T) {
 
 	if got := nav.SelectItemByHotkey("T"); got != -1 {
 		t.Fatalf("expected disabled submenu hotkey to be ignored, got %d", got)
+	}
+}
+
+func TestDisabledCommandNoOSVariant(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "Linux Only", Exec: config.ExecConfig{Linux: "echo Linux"}},
+			{Type: "command", Label: "Cross Platform", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// On Windows, the first item should be disabled (Linux only)
+	// The test runs on the current OS, so we check based on that
+	isDisabled := nav.IsItemDisabled(0)
+	// This test is OS-dependent and validates the disabled marking logic
+	// On Linux/Darwin: item should not be disabled
+	// On Windows: item should be disabled
+	switch getOSType() {
+	case "windows":
+		if !isDisabled {
+			t.Fatalf("expected Linux-only command to be disabled on Windows")
+		}
+	default:
+		if isDisabled {
+			t.Fatalf("expected Linux-only command to be enabled on Linux")
+		}
+	}
+
+	// Second item should always be selectable
+	if nav.IsItemDisabled(1) {
+		t.Fatalf("expected cross-platform command to not be disabled")
 	}
 }

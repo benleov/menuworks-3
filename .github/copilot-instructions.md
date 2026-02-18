@@ -60,7 +60,9 @@ menus:
       - type: command
         label: "Show Date"
         exec:
-          command: "date"
+          windows: "echo Current date is %DATE%"
+          linux: "date"
+          mac: "date"
 
   utils:
     title: "Utilities"
@@ -68,19 +70,31 @@ menus:
       - type: command
         label: "List Files"
         exec:
-          command: "ls -la"
+          windows: "dir"
+          linux: "ls -la"
+          mac: "ls -la"
 ```
 
 ### Item Types
 #### `command`
-Runs a shell command.
+Runs a shell command with OS-specific variants.
 ```yaml
 - type: command
-  label: "Run Backup"
-  hotkey: "R"
+  label: "Show Date"
+  hotkey: "D"
   exec:
-    command: "/usr/local/bin/backup.sh"
+    windows: "echo Current date is %DATE% %TIME%"
+    linux: "date"
+    mac: "date"
 ```
+
+**Exec Field:**
+Each command must define at least one OS variant:
+- `windows` — Command for Windows (executed via cmd.exe)
+- `linux` — Command for Linux (executed via sh)
+- `mac` — Command for macOS (executed via sh)
+
+If the current OS has no defined variant, the item appears disabled in the menu and cannot be selected.
 
 #### `submenu`
 Links to another menu.
@@ -205,7 +219,7 @@ The embedded default config in `/assets/` should contain:
 - Example separators
 - Back/Quit options
 
-**Platform-specific commands:** YAML contains a single command string. The Go code handles platform detection and chooses the appropriate shell (`sh -c` on Unix, `cmd /c` on Windows). No conditional logic or platform variants in YAML. Users who need Unix-only or Windows-only commands must maintain separate config files, since the program executes exactly the command string provided without support for conditional or platform-specific variants.
+**Platform-specific commands:** MenuWorks natively supports OS-specific command variants directly in the YAML config. Each command item defines separate command strings for `windows`, `linux`, and `mac` platforms. This allows a single config file to be used across multiple operating systems without duplication or external scripts. At runtime, the OS type is detected and the appropriate variant is selected. If a variant is missing for the current OS, the menu item is silently disabled (shown dimmed) and cannot be selected.
 
 ## Directory Structure
 ```

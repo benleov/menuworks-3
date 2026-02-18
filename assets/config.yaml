@@ -24,13 +24,17 @@ menus:
         label: "Show Date/Time"
         hotkey: "D"
         exec:
-          command: "echo Current date is %DATE% %TIME%"
+          windows: "echo Current date is %DATE% %TIME%"
+          linux: "date"
+          mac: "date"
 
       - type: command
         label: "Show Environment"
         hotkey: "E"
         exec:
-          command: "echo User: %USERNAME%"
+          windows: "echo User: %USERNAME%"
+          linux: "echo User: $USER"
+          mac: "echo User: $USER"
 
       - type: separator
 
@@ -44,13 +48,17 @@ menus:
         label: "Echo Test"
         hotkey: "E"
         exec:
-          command: "echo Hello from MenuWorks!"
+          windows: "echo Hello from MenuWorks!"
+          linux: "echo Hello from MenuWorks!"
+          mac: "echo Hello from MenuWorks!"
 
       - type: command
         label: "List System Info"
         hotkey: "L"
         exec:
-          command: "echo This is a utility command"
+          windows: "echo This is a utility command"
+          linux: "echo This is a utility command"
+          mac: "echo This is a utility command"
 
       - type: separator
 

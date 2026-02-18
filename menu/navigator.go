@@ -2,6 +2,7 @@ package menu
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"unicode"
 
@@ -96,6 +97,7 @@ func (n *Navigator) validateTargets() {
 
 // checkMenuTargets checks targets in a menu's items
 func (n *Navigator) checkMenuTargets(menuName string, items []config.MenuItem) {
+	osType := getOSType()
 	for i, item := range items {
 		if item.Type == "submenu" {
 			if n.cfg.Menus == nil {
@@ -107,7 +109,28 @@ func (n *Navigator) checkMenuTargets(menuName string, items []config.MenuItem) {
 				disabledKey := fmt.Sprintf("%s:%d", menuName, i)
 				n.disabledItems[disabledKey] = true
 			}
+		} else if item.Type == "command" {
+			// Check if command has a variant for the current OS
+			if item.Exec.CommandForOS(osType) == "" {
+				// No variant for this OS - mark as disabled
+				disabledKey := fmt.Sprintf("%s:%d", menuName, i)
+				n.disabledItems[disabledKey] = true
+			}
 		}
+	}
+}
+
+// getOSType returns the current OS type string
+func getOSType() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "windows"
+	case "linux":
+		return "linux"
+	case "darwin":
+		return "darwin"
+	default:
+		return runtime.GOOS
 	}
 }
 
