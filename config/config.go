@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,11 +52,25 @@ type Menu struct {
 	Items []MenuItem  `yaml:"items"`
 }
 
+// ThemeColors defines the color scheme for the UI
+type ThemeColors struct {
+	Background  string `yaml:"background"`
+	Text        string `yaml:"text"`
+	Border      string `yaml:"border"`
+	HighlightBg string `yaml:"highlight_bg"`
+	HighlightFg string `yaml:"highlight_fg"`
+	Hotkey      string `yaml:"hotkey"`
+	Shadow      string `yaml:"shadow"`
+	Disabled    string `yaml:"disabled"`
+}
+
 // Config is the root configuration structure
 type Config struct {
-	Title string          `yaml:"title"`
-	Items []MenuItem      `yaml:"items"`
-	Menus map[string]Menu `yaml:"menus"`
+	Title  string               `yaml:"title"`
+	Items  []MenuItem           `yaml:"items"`
+	Menus  map[string]Menu      `yaml:"menus"`
+	Theme  string               `yaml:"theme,omitempty"`
+	Themes map[string]ThemeColors `yaml:"themes,omitempty"`
 }
 
 // Load reads the config file from disk, or writes embedded default if missing
@@ -169,4 +185,105 @@ func validateItem(item MenuItem, index int, cfg *Config) []string {
 // GetDefaultConfig returns the embedded default config as a string
 func GetDefaultConfig() string {
 	return defaultConfigYAML
+}
+
+// ParseColorName converts a color name string to tcell.Color
+// Returns the color and true if valid, otherwise returns a default color and false
+func ParseColorName(name string) (tcell.Color, bool) {
+	if name == "" {
+		return tcell.ColorDefault, false
+	}
+	
+	// Normalize the color name (lowercase, trim spaces)
+	name = strings.ToLower(strings.TrimSpace(name))
+	
+	// Map of valid color names to tcell colors
+	colorMap := map[string]tcell.Color{
+		"black":   tcell.ColorBlack,
+		"maroon":  tcell.ColorMaroon,
+		"green":   tcell.ColorGreen,
+		"olive":   tcell.ColorOlive,
+		"navy":    tcell.ColorNavy,
+		"purple":  tcell.ColorPurple,
+		"teal":    tcell.ColorTeal,
+		"silver":  tcell.ColorSilver,
+		"gray":    tcell.ColorGray,
+		"grey":    tcell.ColorGray,
+		"red":     tcell.ColorRed,
+		"lime":    tcell.ColorLime,
+		"yellow":  tcell.ColorYellow,
+		"blue":    tcell.ColorBlue,
+		"fuchsia": tcell.ColorFuchsia,
+		"aqua":    tcell.ColorAqua,
+		"cyan":    tcell.ColorAqua,
+		"white":   tcell.ColorWhite,
+	}
+	
+	if color, ok := colorMap[name]; ok {
+		return color, true
+	}
+	
+	return tcell.ColorDefault, false
+}
+
+// ValidateTheme validates that the selected theme exists and has valid colors
+// Returns a list of warning messages (not fatal errors)
+func ValidateTheme(cfg *Config) []string {
+	var warnings []string
+	
+	// If no theme is specified, that's fine (use defaults)
+	if cfg.Theme == "" {
+		return warnings
+	}
+	
+	// Check if themes map exists
+	if cfg.Themes == nil || len(cfg.Themes) == 0 {
+		warnings = append(warnings, fmt.Sprintf("theme: selected theme '%s' but no themes defined", cfg.Theme))
+		return warnings
+	}
+	
+	// Check if selected theme exists
+	theme, exists := cfg.Themes[cfg.Theme]
+	if !exists {
+		warnings = append(warnings, fmt.Sprintf("theme: selected theme '%s' not found in themes", cfg.Theme))
+		return warnings
+	}
+	
+	// Validate each color in the theme
+	colorFields := map[string]string{
+		"background":   theme.Background,
+		"text":         theme.Text,
+		"border":       theme.Border,
+		"highlight_bg": theme.HighlightBg,
+		"highlight_fg": theme.HighlightFg,
+		"hotkey":       theme.Hotkey,
+		"shadow":       theme.Shadow,
+		"disabled":     theme.Disabled,
+	}
+	
+	for fieldName, colorName := range colorFields {
+		if colorName == "" {
+			warnings = append(warnings, fmt.Sprintf("theme '%s': %s color not specified", cfg.Theme, fieldName))
+			continue
+		}
+		if _, valid := ParseColorName(colorName); !valid {
+			warnings = append(warnings, fmt.Sprintf("theme '%s': invalid color name '%s' for %s", cfg.Theme, colorName, fieldName))
+		}
+	}
+	
+	return warnings
+}
+
+// GetThemeColors returns the ThemeColors for the selected theme, or nil if none/invalid
+func GetThemeColors(cfg *Config) *ThemeColors {
+	if cfg.Theme == "" || cfg.Themes == nil {
+		return nil
+	}
+	
+	theme, exists := cfg.Themes[cfg.Theme]
+	if !exists {
+		return nil
+	}
+	
+	return &theme
 }

@@ -155,6 +155,51 @@ By default, all commands display their output in a scrollable full-screen viewer
   showOutput: false  # Output will not be displayed
 ```
 
+### Themes
+
+MenuWorks supports **customizable color themes** defined in your `config.yaml` file. You can create multiple named themes and switch between them.
+
+#### Define a Theme
+
+Add a `themes:` section to your config with one or more named color schemes:
+
+```yaml
+theme: "dark"  # Select which theme to use
+
+themes:
+  dark:
+    background: "blue"
+    text: "silver"
+    border: "aqua"
+    highlight_bg: "navy"
+    highlight_fg: "white"
+    hotkey: "yellow"
+    shadow: "gray"
+    disabled: "gray"
+  
+  light:
+    background: "white"
+    text: "black"
+    border: "navy"
+    highlight_bg: "silver"
+    highlight_fg: "black"
+    hotkey: "blue"
+    shadow: "gray"
+    disabled: "gray"
+```
+
+#### Supported Colors
+
+Use any of these **16 named colors** (plus aliases):
+
+`black`, `white`, `red`, `blue`, `green`, `yellow`, `aqua` (or `cyan`), `silver`, `gray` (or `grey`), `navy`, `maroon`, `purple`, `teal`, `olive`, `lime`, `fuchsia`
+
+**Invalid or missing colors automatically fall back to defaults**, so your config remains valid even with theme errors.
+
+#### Theme Reload
+
+Press **R** in any menu to reload your config **and apply the new theme** immediately — no restart needed.
+
 ## Usage
 
 ### Running

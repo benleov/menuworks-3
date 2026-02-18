@@ -40,6 +40,19 @@ The top‑level `title:` and `items:` define the root menu.
 ```yaml
 title: "MenuWorks 3.0"
 
+theme: "dark"
+
+themes:
+  dark:
+    background: "blue"
+    text: "silver"
+    border: "aqua"
+    highlight_bg: "navy"
+    highlight_fg: "white"
+    hotkey: "yellow"
+    shadow: "gray"
+    disabled: "gray"
+
 items:
   - type: submenu
     label: "System Tools"
@@ -118,6 +131,50 @@ Visual separator line (non-selectable). Separators require only the `type` field
 ```
 
 **Missing Target Handling:** If a `submenu` references a `target:` that doesn't exist in `menus:`, the item is shown but disabled (dimmed) to indicate its presence. An error pop-up is displayed the *first time* the menu containing the broken item is opened, then not repeated on subsequent visits to that menu unless the config is reloaded. If a user attempts to activate a disabled item (e.g., by pressing Enter or its hotkey), a brief error message confirms it cannot be accessed. Deeper menu chains do not break unless the user explicitly tries to traverse through the invalid link.
+
+### Themes
+MenuWorks supports customizable color themes defined in the YAML config. Users can select a theme and define multiple named color schemes.
+
+#### Theme Selection
+Use the `theme:` field at the root level to select which theme to use:
+```yaml
+theme: "dark"
+```
+
+#### Theme Definition
+Define color schemes under the `themes:` section. Each theme requires 8 color fields:
+```yaml
+themes:
+  dark:
+    background: "blue"         # Main background color
+    text: "silver"             # Normal text color
+    border: "aqua"             # Window border color
+    highlight_bg: "navy"       # Highlighted item background
+    highlight_fg: "white"      # Highlighted item foreground
+    hotkey: "yellow"           # Hotkey letter color
+    shadow: "gray"             # Drop shadow color
+    disabled: "gray"           # Disabled item color
+  
+  light:
+    background: "white"
+    text: "black"
+    border: "navy"
+    highlight_bg: "silver"
+    highlight_fg: "black"
+    hotkey: "blue"
+    shadow: "gray"
+    disabled: "gray"
+```
+
+**Color names:** Use tcell's named colors: `black`, `white`, `red`, `blue`, `green`, `yellow`, `aqua` (or `cyan`), `silver`, `gray` (or `grey`), `navy`, `maroon`, `purple`, `teal`, `olive`, `lime`, `fuchsia`. Invalid color names fall back to default colors silently.
+
+**Fallback behavior:**
+- If `theme:` is omitted or empty, the app uses built-in default colors (classic VGA palette).
+- If the selected theme doesn't exist, a warning is logged and defaults are used.
+- If a theme is missing color fields or has invalid color names, those specific colors fall back to defaults.
+- Config with theme errors remains valid and loads successfully.
+
+**Theme reload:** Pressing `R` reloads both the config and the theme. Theme changes take effect immediately without restarting the app.
 
 ## UI Requirements
 - **UTF‑8 box‑drawing characters**.

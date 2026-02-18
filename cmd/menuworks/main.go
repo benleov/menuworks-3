@@ -53,6 +53,9 @@ func main() {
 		}
 	}
 
+	// Apply theme from config (if specified)
+	applyThemeFromConfig(screen, cfg)
+
 	// Show splash screen with fixed 1000ms delay
 	screen.DrawSplashScreen(version)
 	
@@ -387,6 +390,8 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 						showErrorDialog(screen, eventChan, "Reload Error", fmt.Sprintf("Failed to reload config: %v", err))
 					} else {
 						cfg = newCfg
+						// Apply theme from reloaded config
+						applyThemeFromConfig(screen, cfg)
 						// Preserve selection state as much as possible
 						oldNavState := navigator.RememberSelection()
 
@@ -480,3 +485,40 @@ func showMessageDialog(screen *ui.Screen, eventChan <-chan tcell.Event, title, m
 		}
 	}
 }
+
+// applyThemeFromConfig loads and applies the theme from the config
+// If theme is not specified or invalid, uses default colors
+func applyThemeFromConfig(screen *ui.Screen, cfg *config.Config) {
+	// Validate theme first
+	warnings := config.ValidateTheme(cfg)
+	
+	// Get theme colors
+	themeColors := config.GetThemeColors(cfg)
+	if themeColors != nil {
+		// Convert config.ThemeColors to ui.ThemeColors
+		uiTheme := ui.ThemeColors{
+			Background:  themeColors.Background,
+			Text:        themeColors.Text,
+			Border:      themeColors.Border,
+			HighlightBg: themeColors.HighlightBg,
+			HighlightFg: themeColors.HighlightFg,
+			Hotkey:      themeColors.Hotkey,
+			Shadow:      themeColors.Shadow,
+			Disabled:    themeColors.Disabled,
+		}
+		
+		// Apply theme with color parser
+		ui.ApplyTheme(uiTheme, config.ParseColorName)
+		
+		// Refresh screen's default style to pick up new theme colors
+		screen.RefreshTheme()
+		
+		// Log warnings if any (could be shown in footer or ignored)
+		if len(warnings) > 0 {
+			// For now, silently continue with defaults for invalid colors
+			// The color parser will use defaults for invalid names
+		}
+	}
+	// If themeColors is nil, keep using default colors (no action needed)
+}
+

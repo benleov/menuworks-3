@@ -1,5 +1,40 @@
 title: "MenuWorks 3.0"
 
+# Theme selection (choose from themes defined below)
+theme: "dark"
+
+# Theme definitions
+themes:
+  retro:
+    background: "blue"
+    text: "silver"
+    border: "aqua"
+    highlight_bg: "blue"
+    highlight_fg: "white"
+    hotkey: "yellow"
+    shadow: "gray"
+    disabled: "gray"
+  
+  dark:
+    background: "blue"
+    text: "silver"
+    border: "aqua"
+    highlight_bg: "navy"
+    highlight_fg: "white"
+    hotkey: "yellow"
+    shadow: "gray"
+    disabled: "gray"
+  
+  light:
+    background: "white"
+    text: "black"
+    border: "navy"
+    highlight_bg: "silver"
+    highlight_fg: "black"
+    hotkey: "blue"
+    shadow: "gray"
+    disabled: "gray"
+
 items:
   - type: submenu
     label: "System Tools"

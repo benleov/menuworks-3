@@ -85,74 +85,131 @@ func (s *Screen) SetCellUnsafe(x, y int, r rune, st tcell.Style) {
 	s.tcellScreen.SetCell(x, y, st, r)
 }
 
+// RefreshTheme updates the screen's default style to reflect current theme colors
+func (s *Screen) RefreshTheme() {
+	s.tcellScreen.SetStyle(defaultStyle())
+}
 
 
-// Color constants for VGA palette
+
+// Color constants for VGA palette (mutable for theme support)
 var (
 	darkBlue     = tcell.ColorBlue
 	brightCyan   = tcell.ColorAqua
 	white        = tcell.ColorWhite
-	lightGray    = tcell.Color250 // Light gray
-	darkGray     = tcell.Color240 // Dark gray for shadow
+	lightGray    = tcell.Color250  // Light gray
+	darkGray     = tcell.Color240  // Dark gray for shadow
 	brightYellow = tcell.ColorYellow
+	
+	// Theme-specific colors (can be overridden by ApplyTheme)
+	colorBackground  = tcell.ColorBlue
+	colorText        = tcell.Color250
+	colorBorder      = tcell.ColorAqua
+	colorHighlightBg = tcell.ColorBlue
+	colorHighlightFg = tcell.ColorWhite
+	colorHotkey      = tcell.ColorYellow
+	colorShadow      = tcell.Color240
+	colorDisabled    = tcell.Color240
 )
 
-// defaultStyle returns the default style (light gray on dark blue)
+// ThemeColors represents a color scheme for the UI
+type ThemeColors struct {
+	Background  string
+	Text        string
+	Border      string
+	HighlightBg string
+	HighlightFg string
+	Hotkey      string
+	Shadow      string
+	Disabled    string
+}
+
+// ApplyTheme updates the global color variables with the provided theme
+// colorParser is a function that converts a color name to tcell.Color
+func ApplyTheme(theme ThemeColors, colorParser func(string) (tcell.Color, bool)) {
+	// Helper to apply color or keep default
+	applyColor := func(colorName string, defaultColor tcell.Color) tcell.Color {
+		if color, valid := colorParser(colorName); valid {
+			return color
+		}
+		return defaultColor
+	}
+	
+	// Update theme-specific colors
+	colorBackground = applyColor(theme.Background, tcell.ColorBlue)
+	colorText = applyColor(theme.Text, tcell.Color250)
+	colorBorder = applyColor(theme.Border, tcell.ColorAqua)
+	colorHighlightBg = applyColor(theme.HighlightBg, tcell.ColorBlue)
+	colorHighlightFg = applyColor(theme.HighlightFg, tcell.ColorWhite)
+	colorHotkey = applyColor(theme.Hotkey, tcell.ColorYellow)
+	colorShadow = applyColor(theme.Shadow, tcell.Color240)
+	colorDisabled = applyColor(theme.Disabled, tcell.Color240)
+	
+	// Update legacy color variables for backwards compatibility
+	darkBlue = colorBackground
+	brightCyan = colorBorder
+	white = colorHighlightFg
+	lightGray = colorText
+	darkGray = colorShadow
+	brightYellow = colorHotkey
+}
+
+// defaultStyle returns the default style (uses theme colors)
 func defaultStyle() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(tcell.Color250).
-		Background(darkBlue)
+		Foreground(colorText).
+		Background(colorBackground)
 }
 
-// StyleNormal returns the normal style (light gray on dark blue)
+// StyleNormal returns the normal style (uses theme colors)
 func StyleNormal() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(tcell.Color250).
-		Background(darkBlue)
+		Foreground(colorText).
+		Background(colorBackground)
 }
 
-// StyleBorder returns the border style (bright cyan on dark blue)
+// StyleBorder returns the border style (uses theme colors)
 func StyleBorder() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(brightCyan).
-		Background(darkBlue)
+		Foreground(colorBorder).
+		Background(colorBackground)
 }
 
-// StyleHighlight returns the highlight style (white on blue)
+// StyleHighlight returns the highlight style (uses theme colors)
 func StyleHighlight() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(white).
-		Background(tcell.ColorBlue)
+		Foreground(colorHighlightFg).
+		Background(colorHighlightBg)
 }
 
-// StyleShadow returns the shadow style (dark gray on black)
+// StyleShadow returns the shadow style (uses theme colors)
 func StyleShadow() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(darkGray).
-		Background(darkGray)
+		Foreground(colorShadow).
+		Background(colorShadow)
 }
 
-// StyleHotkey returns the hotkey style (bright yellow on dark blue)
+// StyleHotkey returns the hotkey style (uses theme colors)
 func StyleHotkey() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(brightYellow).
-		Background(darkBlue).
+		Foreground(colorHotkey).
+		Background(colorBackground).
 		Bold(true)
 }
 
-// StyleHotkeyHighlight returns the hotkey highlight style (bright yellow on blue)
+// StyleHotkeyHighlight returns the hotkey highlight style (uses theme colors)
 func StyleHotkeyHighlight() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(brightYellow).
-		Background(tcell.ColorBlue).
+		Foreground(colorHotkey).
+		Background(colorHighlightBg).
 		Bold(true)
 }
 
-// StyleDisabled returns the disabled style (dark gray on dark blue)
+// StyleDisabled returns the disabled style (uses theme colors)
 func StyleDisabled() tcell.Style {
 	return tcell.StyleDefault.
-		Foreground(tcell.Color240).
-		Background(darkBlue)
+		Foreground(colorDisabled).
+		Background(colorBackground)
 }
 
 // FormatDate returns current date in DD/MM/YY format
