@@ -53,13 +53,13 @@ func main() {
 		}
 	}
 
-	// Show splash screen with fixed 400ms delay
+	// Show splash screen with fixed 1000ms delay
 	screen.DrawSplashScreen(version)
 	
 	// Consume and discard all events during splash (prevents macOS hang)
 	// Per spec: "key events are consumed and discarded by reading and ignoring tcell events"
 	splashStart := time.Now()
-	for time.Since(splashStart) < 400*time.Millisecond {
+	for time.Since(splashStart) < 1000*time.Millisecond {
 		select {
 		case <-eventChan:
 			// Event discarded (consumed but ignored)
