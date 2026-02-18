@@ -6,11 +6,6 @@ items:
     hotkey: "S"
     target: "system"
 
-  - type: submenu
-    label: "Utilities"
-    hotkey: "U"
-    target: "utils"
-
   - type: separator
 
   - type: back
@@ -21,46 +16,30 @@ menus:
     title: "System Tools"
     items:
       - type: command
-        label: "Show Date/Time"
-        hotkey: "D"
+        label: "System Info"
+        hotkey: "I"
         exec:
-          windows: "echo Current date is %DATE% %TIME%"
-          linux: "date"
-          mac: "date"
-
+          windows: "systeminfo"
+          linux: "uname -a"
+          mac: "system_profiler SPSoftwareDataType"
       - type: command
-        label: "Show Environment"
-        hotkey: "E"
+        label: "CPU Info"
+        hotkey: "C"
         exec:
-          windows: "echo User: %USERNAME%"
-          linux: "echo User: $USER"
-          mac: "echo User: $USER"
-
-      - type: separator
-
-      - type: back
-        label: "Back"
-
-  utils:
-    title: "Utilities"
-    items:
+          windows: "wmic cpu get name,ThreadCount,MaxClockSpeed"
+          linux: "lscpu"
+          mac: "sysctl -n hw.ncpu"
       - type: command
-        label: "Echo Test"
-        hotkey: "E"
+        label: "Network Status"
+        hotkey: "N"
         exec:
-          windows: "echo Hello from MenuWorks!"
-          linux: "echo Hello from MenuWorks!"
-          mac: "echo Hello from MenuWorks!"
-
+          windows: "ipconfig"
+          linux: "ip addr show"
+          mac: "ifconfig"
       - type: command
-        label: "List System Info"
-        hotkey: "L"
+        label: "Running Processes"
+        hotkey: "R"
         exec:
-          windows: "echo This is a utility command"
-          linux: "echo This is a utility command"
-          mac: "echo This is a utility command"
-
-      - type: separator
-
-      - type: back
-        label: "Back"
+          windows: "tasklist"
+          linux: "ps aux"
+          mac: "ps aux"

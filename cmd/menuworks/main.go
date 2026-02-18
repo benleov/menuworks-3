@@ -316,7 +316,7 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 
 			if showOutput && output != "" {
 				// Display output in scrollable viewer
-				screen.DrawCommandOutput(output)
+				screen.DrawCommandOutput(output, eventChan)
 			} else {
 				// No output or user chose to hide output
 				showMessageDialog(screen, eventChan, "Command Executed", "Command finished successfully.")

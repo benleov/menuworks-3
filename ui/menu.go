@@ -87,7 +87,7 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 
 // DrawCommandOutput displays command output in a scrollable full-screen viewer
 // Returns when user presses any key
-func (s *Screen) DrawCommandOutput(output string) {
+func (s *Screen) DrawCommandOutput(output string, eventChan <-chan tcell.Event) {
 	w, h := s.Size()
 
 	// Split output into lines
@@ -134,7 +134,7 @@ func (s *Screen) DrawCommandOutput(output string) {
 		s.Sync()
 
 		// Wait for input
-		ev := s.PollEvent()
+		ev := <-eventChan
 		if ev == nil {
 			continue
 		}
