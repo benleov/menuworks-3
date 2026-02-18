@@ -67,7 +67,7 @@ On first run, if `config.yaml` is missing, MenuWorks creates one with sample men
 ### Configuration Schema
 
 ```yaml
-title: "MenuWorks 2.0"
+title: "MenuWorks 3.0"
 
 items:
   - type: submenu
@@ -425,4 +425,4 @@ Contributions welcome! Please:
 
 ---
 
-**MenuWorks 2.0** — Because menus never go out of style.
+**MenuWorks 3.0** — Because menus never go out of style.

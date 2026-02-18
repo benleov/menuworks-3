@@ -462,7 +462,7 @@ func (s *Screen) DrawSplashScreen(version string) {
 
 	// Draw content
 	titleY := startY + 3
-	titleText := "MenuWorks 2.0"
+	titleText := "MenuWorks 3.0"
 	titleX := startX + (splashWidth-len(titleText))/2
 	if titleY < h {
 		s.DrawString(titleX, titleY, titleText, StyleHighlight())

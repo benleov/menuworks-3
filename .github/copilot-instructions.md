@@ -38,7 +38,7 @@ The top‑level `title:` and `items:` define the root menu.
 
 ### Example:
 ```yaml
-title: "MenuWorks 2.0"
+title: "MenuWorks 3.0"
 
 items:
   - type: submenu
@@ -213,7 +213,7 @@ Visual separator line (non-selectable). Separators require only the `type` field
 
 ## Default Config Content
 The embedded default config in `/assets/` should contain:
-- Main menu: "MenuWorks 2.0"
+- Main menu: "MenuWorks 3.0"
 - Submenus: "System Tools" and "Utilities"
 - Safe cross-platform commands using `echo` (works on Windows, Linux, macOS)
 - Example separators
