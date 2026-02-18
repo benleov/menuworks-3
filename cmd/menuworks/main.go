@@ -329,7 +329,7 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 
 		if item.Type == "back" {
 			if navigator.IsAtRoot() {
-				return
+				os.Exit(0)
 			}
 			navigator.Back()
 		}
