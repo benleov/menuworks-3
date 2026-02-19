@@ -2,7 +2,7 @@
 
 A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and macOS,  heavily inspired by the [MenuWorks 2.10](https://www.peteravritch.com/portfolio/menuworks21) application released in 1987. Built in Go with a single, self-contained binary that requires no external dependencies. Configuration is done via a single yaml file.
 
-[![Release](https://img.shields.io/github/v/release/benleov/menuworks-3?sort=semver)](https://github.com/benleov/menuworks-3/releases) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml) [![Release](https://github.com/benleov/menuworks-3/actions/workflows/release.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/release.yml)
+![Version](https://img.shields.io/badge/version-3.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml) [![Release](https://github.com/benleov/menuworks-3/actions/workflows/release.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/release.yml)
 
 ## Screenshots
 
