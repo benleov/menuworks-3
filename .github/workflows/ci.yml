@@ -1,0 +1,44 @@
+name: CI Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Run tests
+        run: |
+          go test -v ./config
+          go test -v ./menu
+
+      - name: Run build (verify compilation)
+        run: |
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-windows.exe cmd/menuworks/main.go
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-linux cmd/menuworks/main.go
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-macos cmd/menuworks/main.go
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=test" -o dist/test-macos-arm64 cmd/menuworks/main.go
+          echo "All builds succeeded"
+
+      - name: Clean up test binaries
+        if: always()
+        run: |
+          rm -f dist/test-*
+
+      - name: Report results
+        if: success()
+        run: echo "✅ CI passed: tests and cross-platform builds verified"

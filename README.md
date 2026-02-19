@@ -2,7 +2,7 @@
 
 A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and macOS. Built in Go with a single, self-contained binary that requires no external dependencies. Configuration is done by a single yaml file.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
+![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benworks/menuworks/actions/workflows/ci.yml/badge.svg)](https://github.com/benworks/menuworks/actions/workflows/ci.yml) [![Release](https://github.com/benworks/menuworks/actions/workflows/release.yml/badge.svg)](https://github.com/benworks/menuworks/actions/workflows/release.yml)
 
 ## Screenshots
 
@@ -45,7 +45,7 @@ Place the binary anywhere, optionally alongside a `config.yaml` file.
 ### Option 2: Build from Source
 
 **Requirements:**
-- Go 1.21+ (portable installation included: `bin/go/`)
+- Go 1.21+ (portable installation extracted to: `bin/go/`)
 - Windows, Linux, or macOS
 
 **Build All Platforms:**
@@ -68,6 +68,69 @@ chmod +x build.sh
 ```
 
 Binaries are output to `dist/`.
+
+## Publishing Releases
+
+MenuWorks uses **GitHub Actions** to automatically build, test, and publish releases to GitHub Releases.
+
+### How to Create a Release
+
+1. **Update CHANGELOG.md** with notes for the new version (optional — GitHub auto-generates from commits):
+   ```markdown
+   ## [1.1.0] - 2026-02-20
+   
+   ### Added
+   - New feature description
+   
+   ### Fixed
+   - Bug fix description
+   ```
+
+2. **Create and push a git tag** to trigger the release workflow:
+   ```bash
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
+
+3. **Wait for GitHub Actions to complete**:
+   - ✅ **CI Tests** runs: `./config` and `./menu` packages tested
+   - ✅ **Build & Release** runs (if tests pass):
+     - Cross-compiles for Windows, Linux, macOS (Intel + ARM64)
+     - Generates SHA256 checksums
+     - Creates GitHub Release with auto-generated release notes
+     - Uploads all 4 binaries + checksums.txt
+
+4. **Release automatically published** at [github.com/benworks/menuworks/releases](https://github.com/benworks/menuworks/releases)
+
+### Release Artifacts
+
+Each release includes:
+- `menuworks-windows.exe` — Windows 64-bit executable
+- `menuworks-linux` — Linux 64-bit executable
+- `menuworks-macos` — macOS Intel (x86_64) executable
+- `menuworks-macos-arm64` — macOS Apple Silicon (ARM64) executable
+- `checksums.txt` — SHA256 checksums for all binaries (verify integrity with `sha256sum -c checksums.txt`)
+
+### Version Injection
+
+The version is automatically injected into the binary at compile-time via `-ldflags` when the tag is pushed. The binary displays the version in the splash screen on startup.
+
+**No manual version editing is required** — the tag name (e.g., `v1.0.0`) is extracted and passed to the build process.
+
+### Verify Checksums
+
+After downloading binaries:
+```bash
+sha256sum -c checksums.txt
+# Output: menuworks-linux: OK
+```
+
+### CI/CD Status
+
+- **CI Workflow**: Runs on every pull request to `main`. Tests must pass before merging.
+- **Release Workflow**: Triggered automatically on git tags matching `v*` (e.g., `v1.0.0`). Releases are published to GitHub only if tests pass.
+
+---
 
 ## Configuration
 

@@ -30,10 +30,11 @@ themes:
     text: "black"
     border: "navy"
     highlight_bg: "silver"
-    highlight_fg: "black"
+    highlight_fg: "white"
     hotkey: "blue"
     shadow: "gray"
     disabled: "gray"
+    menu_bg: "silver"
 
 items:
   - type: submenu

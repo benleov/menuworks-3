@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run tests
+        run: |
+          go test -v ./config
+          go test -v ./menu
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Build for all platforms
+        run: |
+          mkdir -p dist
+          
+          # Windows 64-bit
+          GOOS=windows GOARCH=amd64 go build \
+            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -o dist/menuworks-windows.exe \
+            cmd/menuworks/main.go
+          echo "✓ Built Windows"
+          
+          # Linux 64-bit
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -o dist/menuworks-linux \
+            cmd/menuworks/main.go
+          echo "✓ Built Linux"
+          
+          # macOS Intel 64-bit
+          GOOS=darwin GOARCH=amd64 go build \
+            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -o dist/menuworks-macos \
+            cmd/menuworks/main.go
+          echo "✓ Built macOS (Intel)"
+          
+          # macOS Apple Silicon
+          GOOS=darwin GOARCH=arm64 go build \
+            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -o dist/menuworks-macos-arm64 \
+            cmd/menuworks/main.go
+          echo "✓ Built macOS (ARM64)"
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum menuworks-windows.exe menuworks-linux menuworks-macos menuworks-macos-arm64 > checksums.txt
+          cat checksums.txt
+          cd ..
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: menuworks-binaries
+          path: dist/menuworks-*
+          retention-days: 30
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v3
+        with:
+          name: checksums
+          path: dist/checksums.txt
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: CHANGELOG.md
+          files: |
+            dist/menuworks-windows.exe
+            dist/menuworks-linux
+            dist/menuworks-macos
+            dist/menuworks-macos-arm64
+            dist/checksums.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
