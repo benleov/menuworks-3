@@ -2,7 +2,7 @@
 
 - **important** Be concise, use context wisely.
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
-- **important** This is built on windows; the `head` command is not available. 
+- **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version 1.0.0` on windows.
 - **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
 ## Project Goal

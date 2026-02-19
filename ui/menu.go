@@ -333,7 +333,7 @@ func (s *Screen) DrawDialog(title, message string, buttons []string) int {
 
 	// Draw message text wrapped
 	messageStartY := startY + 2
-	lines := wrapText(message, dialogWidth-4)
+	lines := WrapText(message, dialogWidth-4)
 	for i, line := range lines {
 		if i >= 5 {
 			break
@@ -410,8 +410,8 @@ func (s *Screen) DrawDialog(title, message string, buttons []string) int {
 	}
 }
 
-// wrapText wraps text to fit within maxWidth
-func wrapText(text string, maxWidth int) []string {
+// WrapText wraps text to fit within maxWidth
+func WrapText(text string, maxWidth int) []string {
 	var lines []string
 	words := strings.Fields(text)
 	var currentLine string

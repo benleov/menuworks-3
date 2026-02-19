@@ -74,21 +74,24 @@ type Config struct {
 }
 
 // Load reads the config file from disk, or writes embedded default if missing
-func Load(filePath string) (*Config, error) {
+// Returns (config, wasCreated, error) where wasCreated indicates if config was just created on first run
+func Load(filePath string) (*Config, bool, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, write embedded default
 			if writeErr := WriteDefault(filePath); writeErr != nil {
-				return nil, fmt.Errorf("failed to write default config: %w", writeErr)
+				return nil, false, fmt.Errorf("failed to write default config: %w", writeErr)
 			}
-			// Parse the embedded default
-			return parseYAML([]byte(defaultConfigYAML))
+			// Parse the embedded default and signal that it was created
+			cfg, parseErr := parseYAML([]byte(defaultConfigYAML))
+			return cfg, true, parseErr
 		}
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return nil, false, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	return parseYAML(data)
+	cfg, err := parseYAML(data)
+	return cfg, false, err
 }
 
 // parseYAML unmarshals YAML bytes into Config struct

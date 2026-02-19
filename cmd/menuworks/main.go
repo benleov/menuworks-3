@@ -42,15 +42,16 @@ func main() {
 	ensureTerminalSize(screen, eventChan)
 
 	// Load configuration
-	cfg, err := config.Load(configPath)
+	cfg, wasCreated, err := config.Load(configPath)
 	if err != nil {
 		handleConfigError(screen, eventChan, configPath, err)
 		// If handleConfigError didn't exit, assume we should retry
-		cfg, err = config.Load(configPath)
+		cfg, _, err = config.Load(configPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal: failed to load config: %v\n", err)
 			os.Exit(1)
 		}
+		wasCreated = false // Error recovery means not a fresh creation
 	}
 
 	// Apply theme from config (if specified)
@@ -74,6 +75,11 @@ func main() {
 	// Explicitly clear screen before transitioning to menu
 	screen.Clear()
 	screen.Sync()
+
+	// Show first-run notification if config was just created
+	if wasCreated {
+		showMessageDialog(screen, eventChan, "First Run", "A configuration file could not be found, so one has been created for you in the directory you ran MenuWorks. Edit this file to modify menu items. Press \"R\" to reload it.")
+	}
 
 	// Create navigator
 	navigator := menu.NewNavigator(cfg)
@@ -346,7 +352,7 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 				return
 			}
 			// Reload config after resize
-			newCfg, err := config.Load(configPath)
+			newCfg, _, err := config.Load(configPath)
 			if err == nil {
 				cfg = newCfg
 				navigator = menu.NewNavigator(cfg)
@@ -385,7 +391,7 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 			case tcell.KeyRune:
 				if e.Rune() == 'R' || e.Rune() == 'r' {
 					// Reload config
-					newCfg, err := config.Load(configPath)
+					newCfg, _, err := config.Load(configPath)
 					if err != nil {
 						showErrorDialog(screen, eventChan, "Reload Error", fmt.Sprintf("Failed to reload config: %v", err))
 					} else {
@@ -449,7 +455,7 @@ func showMessageDialog(screen *ui.Screen, eventChan <-chan tcell.Event, title, m
 	w, h := screen.Size()
 
 	dialogWidth := 50
-	dialogHeight := 10
+	dialogHeight := 12
 	startX := (w - dialogWidth) / 2
 	startY := (h - dialogHeight) / 2
 
@@ -457,11 +463,11 @@ func showMessageDialog(screen *ui.Screen, eventChan <-chan tcell.Event, title, m
 		screen.ClearRect(0, 0, w, h)
 		screen.DrawBorder(startX, startY, dialogWidth, dialogHeight, " "+title+" ")
 
-		// Draw message
-		lines := strings.Split(message, "\n")
+		// Draw message with text wrapping
+		lines := ui.WrapText(message, dialogWidth-4)
 		msgY := startY + 2
 		for i, line := range lines {
-			if i >= 4 {
+			if i >= 6 {
 				break
 			}
 			if msgY+i < h {
