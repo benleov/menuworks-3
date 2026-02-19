@@ -1,13 +1,26 @@
 # MenuWorks 3.0
 
-A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and macOS. Built in Go with a single, self-contained binary that requires no external dependencies.
+A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and macOS. Built in Go with a single, self-contained binary that requires no external dependencies. Configuration is done by a single yaml file.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
+
+## Screenshots
+
+### Retro theme
+
+[![Retro Theme](./images/retro.png)](./images/retro.png)
+
+### Light theme
+
+[![Light Theme](./images/light.png)](./images/light.png)
+
+
 
 ## Features
 
 - **Single Self-Contained Binary** — No runtime dependencies, no external files required (except config)
 - **Retro DOS Aesthetic** — 80×25 terminal layout with double-line borders, drop shadows, and VGA colors
+- **Customizable Themes** — Define and switch between named color themes in the YAML config
 - **Hierarchical Menus** — Unlimited menu nesting with menu chaining via `target`
 - **Hotkeys** — Explicit hotkey assignment or auto-generated from menu labels
 - **Configuration** — YAML-based config file (`config.yaml`) with embedded default fallback
