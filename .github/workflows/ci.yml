@@ -38,7 +38,3 @@ jobs:
         if: always()
         run: |
           rm -f dist/test-*
-
-      - name: Report results
-        if: success()
-        run: echo "CI passed: tests and cross-platform builds verified"
