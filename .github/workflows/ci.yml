@@ -41,4 +41,4 @@ jobs:
 
       - name: Report results
         if: success()
-        run: echo "✅ CI passed: tests and cross-platform builds verified"
+        run: echo "CI passed: tests and cross-platform builds verified"

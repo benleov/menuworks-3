@@ -50,28 +50,28 @@ jobs:
             -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-windows.exe \
             cmd/menuworks/main.go
-          echo "✓ Built Windows"
+          echo "Built Windows"
           
           # Linux 64-bit
           GOOS=linux GOARCH=amd64 go build \
             -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-linux \
             cmd/menuworks/main.go
-          echo "✓ Built Linux"
+          echo "Built Linux"
           
           # macOS Intel 64-bit
           GOOS=darwin GOARCH=amd64 go build \
             -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-macos \
             cmd/menuworks/main.go
-          echo "✓ Built macOS (Intel)"
+          echo "Built macOS (Intel)"
           
           # macOS Apple Silicon
           GOOS=darwin GOARCH=arm64 go build \
             -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-macos-arm64 \
             cmd/menuworks/main.go
-          echo "✓ Built macOS (ARM64)"
+          echo "Built macOS (ARM64)"
 
       - name: Generate checksums
         run: |
