@@ -62,6 +62,7 @@ type ThemeColors struct {
 	Hotkey      string `yaml:"hotkey"`
 	Shadow      string `yaml:"shadow"`
 	Disabled    string `yaml:"disabled"`
+	MenuBg      string `yaml:"menu_bg,omitempty"`
 }
 
 // Config is the root configuration structure

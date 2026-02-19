@@ -110,6 +110,7 @@ var (
 	colorHotkey      = tcell.ColorYellow
 	colorShadow      = tcell.Color240
 	colorDisabled    = tcell.Color240
+	colorMenuBg      = tcell.ColorNavy
 )
 
 // ThemeColors represents a color scheme for the UI
@@ -122,6 +123,7 @@ type ThemeColors struct {
 	Hotkey      string
 	Shadow      string
 	Disabled    string
+	MenuBg      string
 }
 
 // ApplyTheme updates the global color variables with the provided theme
@@ -144,6 +146,11 @@ func ApplyTheme(theme ThemeColors, colorParser func(string) (tcell.Color, bool))
 	colorHotkey = applyColor(theme.Hotkey, tcell.ColorYellow)
 	colorShadow = applyColor(theme.Shadow, tcell.Color240)
 	colorDisabled = applyColor(theme.Disabled, tcell.Color240)
+	if theme.MenuBg != "" {
+		colorMenuBg = applyColor(theme.MenuBg, tcell.ColorNavy)
+	} else {
+		colorMenuBg = colorBackground
+	}
 	
 	// Update legacy color variables for backwards compatibility
 	darkBlue = colorBackground
@@ -210,6 +217,42 @@ func StyleDisabled() tcell.Style {
 	return tcell.StyleDefault.
 		Foreground(colorDisabled).
 		Background(colorBackground)
+}
+
+// StyleMenuBg returns the menu background style (uses theme colors)
+func StyleMenuBg() tcell.Style {
+	return tcell.StyleDefault.
+		Foreground(colorMenuBg).
+		Background(colorMenuBg)
+}
+
+// StyleBorderMenuBg returns border style with menu background
+func StyleBorderMenuBg() tcell.Style {
+	return tcell.StyleDefault.
+		Foreground(colorBorder).
+		Background(colorMenuBg)
+}
+
+// StyleTextMenuBg returns text style with menu background
+func StyleTextMenuBg() tcell.Style {
+	return tcell.StyleDefault.
+		Foreground(colorText).
+		Background(colorMenuBg)
+}
+
+// StyleDisabledMenuBg returns disabled style with menu background
+func StyleDisabledMenuBg() tcell.Style {
+	return tcell.StyleDefault.
+		Foreground(colorDisabled).
+		Background(colorMenuBg)
+}
+
+// StyleHotkeyMenuBg returns hotkey style with menu background
+func StyleHotkeyMenuBg() tcell.Style {
+	return tcell.StyleDefault.
+		Foreground(colorHotkey).
+		Background(colorMenuBg).
+		Bold(true)
 }
 
 // FormatDate returns current date in DD/MM/YY format
@@ -351,16 +394,19 @@ func ParseHotkeyLabel(label, hotkey string) []HotkeylabelSegment {
 	return segments
 }
 
-// DrawBorder draws a double-line border box with optional title
+// DrawBorder draws a double-line border box with optional title using default border style
 func (s *Screen) DrawBorder(x, y, width, height int, title string) {
+	s.DrawBorderWithStyle(x, y, width, height, title, StyleBorder())
+}
+
+// DrawBorderWithStyle draws a double-line border box with optional title and custom style
+func (s *Screen) DrawBorderWithStyle(x, y, width, height int, title string, borderStyle tcell.Style) {
 	w, h := s.Size()
 
 	// Ensure bounds
 	if x < 0 || y < 0 || width <= 0 || height <= 0 {
 		return
 	}
-
-	borderStyle := StyleBorder()
 
 	// Top-left corner
 	if x < w && y < h {
@@ -452,8 +498,12 @@ func (s *Screen) DrawShadow(x, y, width, height int) {
 
 // ClearRect clears a rectangular area
 func (s *Screen) ClearRect(x, y, width, height int) {
+	s.ClearRectWithStyle(x, y, width, height, StyleNormal())
+}
+
+// ClearRectWithStyle clears a rectangular area with a specific style
+func (s *Screen) ClearRectWithStyle(x, y, width, height int, style tcell.Style) {
 	w, h := s.Size()
-	defaultSt := StyleNormal()
 
 	for j := y; j < y+height; j++ {
 		if j < 0 || j >= h {
@@ -463,7 +513,7 @@ func (s *Screen) ClearRect(x, y, width, height int) {
 			if i < 0 || i >= w {
 				continue
 			}
-			s.DrawChar(i, j, ' ', defaultSt)
+			s.DrawChar(i, j, ' ', style)
 		}
 	}
 }

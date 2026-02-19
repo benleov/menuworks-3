@@ -511,6 +511,7 @@ func applyThemeFromConfig(screen *ui.Screen, cfg *config.Config) {
 			Hotkey:      themeColors.Hotkey,
 			Shadow:      themeColors.Shadow,
 			Disabled:    themeColors.Disabled,
+			MenuBg:      themeColors.MenuBg,
 		}
 		
 		// Apply theme with color parser

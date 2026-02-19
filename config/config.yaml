@@ -14,6 +14,7 @@ themes:
     hotkey: "yellow"
     shadow: "gray"
     disabled: "gray"
+    menu_bg: "navy"
   
   light:
     background: "white"
@@ -24,6 +25,7 @@ themes:
     hotkey: "blue"
     shadow: "gray"
     disabled: "gray"
+    menu_bg: "silver"
     
   retro:
     background: "blue"
@@ -34,6 +36,18 @@ themes:
     hotkey: "yellow"
     shadow: "gray"
     disabled: "gray"
+    menu_bg: "navy"
+  
+  fallout:
+    background: "black"
+    text: "lime"
+    border: "yellow"
+    highlight_bg: "olive"
+    highlight_fg: "lime"
+    hotkey: "yellow"
+    shadow: "black"
+    disabled: "olive"
+    menu_bg: "black"
 
 items:
   - type: submenu

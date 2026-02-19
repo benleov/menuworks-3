@@ -30,27 +30,34 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 	// Clear the area
 	s.ClearRect(0, 0, w, h)
 
-	// Draw menu frame
+	// Fill menu interior with menu background color
+	for dy := 0; dy < menuHeight; dy++ {
+		for dx := 0; dx < menuWidth; dx++ {
+			s.DrawChar(startX+dx, startY+dy, ' ', StyleMenuBg())
+		}
+	}
+
+	// Draw menu frame with menu background for borders
 	title := navigator.GetCurrentMenuTitle()
-	s.DrawBorder(startX, startY, menuWidth, menuHeight, " "+title+" ")
+	s.DrawBorderWithStyle(startX, startY, menuWidth, menuHeight, " "+title+" ", StyleBorderMenuBg())
 	s.DrawShadow(startX, startY, menuWidth, menuHeight)
 
-	// Draw header separator line
+	// Draw header separator line with menu background
 	headerSepY := startY + 2
-	borderStyle := StyleBorder()
+	borderStyle := StyleBorderMenuBg()
 	s.DrawBoxChar(startX, headerSepY, boxDoubleTLeft, borderStyle)
 	s.DrawBoxChar(startX+menuWidth-1, headerSepY, boxDoubleTRight, borderStyle)
 	for i := 1; i < menuWidth-1; i++ {
 		s.DrawBoxChar(startX+i, headerSepY, boxDoubleHorizontal, borderStyle)
 	}
 
-	// Draw date/time inside title bar
+	// Draw date/time inside title bar with menu background
 	date := FormatDate()
 	time := FormatTime()
 	leftText := date + "     " + "Menu Works" // 5 spaces
 	timeX := startX + menuWidth - 3 - len(time)
-	s.DrawString(startX+2, startY+1, leftText, StyleNormal())
-	s.DrawString(timeX, startY+1, time, StyleNormal())
+	s.DrawString(startX+2, startY+1, leftText, StyleTextMenuBg())
+	s.DrawString(timeX, startY+1, time, StyleTextMenuBg())
 
 	// Draw menu items
 	items := navigator.GetCurrentMenu()
@@ -180,14 +187,14 @@ func (s *Screen) drawEmptyMenuPlaceholder(x, y, width, height int) {
 	placeholderX := x + (width-len(placeholder))/2
 
 	if placeholderY := y + height/2 - 1; placeholderY >= 0 {
-		s.DrawString(placeholderX, placeholderY, placeholder, StyleNormal())
+		s.DrawString(placeholderX, placeholderY, placeholder, StyleTextMenuBg())
 	}
 
 	// Show Back/Quit option
 	backText := "[B]ack"
 	backX := x + (width-len(backText))/2
 	if backY := y + height/2 + 1; backY >= 0 {
-		s.DrawString(backX, backY, backText, StyleNormal())
+		s.DrawString(backX, backY, backText, StyleTextMenuBg())
 	}
 }
 
@@ -201,11 +208,11 @@ func (s *Screen) drawMenuItems(x, y, width, maxItems int, items []config.MenuIte
 		}
 
 		if item.Type == "separator" {
-			// Draw separator line
+			// Draw separator line with border color on menu background
 			separatorY := y + contentLineIdx
 			if separatorY >= 0 {
 				for col := 1; col < width-1; col++ {
-					s.DrawChar(x+col, separatorY, '─', StyleNormal())
+					s.DrawChar(x+col, separatorY, '─', StyleBorderMenuBg())
 				}
 			}
 			contentLineIdx++
@@ -223,16 +230,23 @@ func (s *Screen) drawMenuItems(x, y, width, maxItems int, items []config.MenuIte
 
 // drawMenuItem draws a single menu item
 func (s *Screen) drawMenuItem(x, y, width int, item config.MenuItem, isSelected, isDisabled bool, navigator *menu.Navigator) {
-	// Determine style
-	var style = StyleNormal()
+	// Determine style for normal text
+	var style tcell.Style
+	var hotkeyStyle tcell.Style
+	
 	if isDisabled {
-		style = StyleDisabled()
+		style = StyleDisabledMenuBg()
+		hotkeyStyle = StyleDisabledMenuBg()
 	} else if isSelected {
 		style = StyleHighlight()
+		hotkeyStyle = StyleHotkeyHighlight()
+	} else {
+		style = StyleTextMenuBg()
+		hotkeyStyle = StyleHotkeyMenuBg()
 	}
 
-	// Clear the line
-	s.ClearRect(x+1, y, width-2, 1)
+	// Clear the line with menu background color
+	s.ClearRectWithStyle(x+1, y, width-2, 1, StyleMenuBg())
 
 	// Build the display text
 	label := item.Label
@@ -253,10 +267,10 @@ func (s *Screen) drawMenuItem(x, y, width int, item config.MenuItem, isSelected,
 	currentX := itemContentX
 	if isSelected && !isDisabled {
 		// Render with hotkey highlighting in selected state
-		currentX = s.drawItemWithHotkey(currentX, y, itemContent, hotkey, StyleHotkeyHighlight(), StyleHighlight())
+		currentX = s.drawItemWithHotkey(currentX, y, itemContent, hotkey, hotkeyStyle, style)
 	} else {
 		// Render with hotkey highlighting in normal/disabled state
-		currentX = s.drawItemWithHotkey(currentX, y, itemContent, hotkey, StyleHotkey(), style)
+		currentX = s.drawItemWithHotkey(currentX, y, itemContent, hotkey, hotkeyStyle, style)
 	}
 
 	// Draw menu item type indicator (► for submenu)
@@ -265,7 +279,7 @@ func (s *Screen) drawMenuItem(x, y, width int, item config.MenuItem, isSelected,
 		if typeIndicatorX > currentX {
 			typeStyle := StyleHighlight()
 			if !isSelected {
-				typeStyle = StyleNormal()
+				typeStyle = StyleBorderMenuBg()
 			}
 			s.DrawChar(typeIndicatorX, y, '►', typeStyle)
 		}
