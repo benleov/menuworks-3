@@ -119,7 +119,8 @@ jobs:
           sed -i "s/badge\/version-[^-]*-blue/badge\/version-$VERSION-blue/" README.md
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git checkout main
+          git fetch origin main
+          git checkout -B main origin/main
           git add README.md
           git commit -m "chore: Update version badge to $VERSION" || true
           git push origin main
