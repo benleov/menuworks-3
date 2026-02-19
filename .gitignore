@@ -15,7 +15,7 @@ bin/
 .DS_Store
 
 # Go
-go.sum
+# (go.sum is committed for reproducible builds)
 
 # Config overrides (user-specific)
 config.yaml.local
