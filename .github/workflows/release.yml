@@ -100,7 +100,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          body_path: CHANGELOG.md
           files: |
             dist/menuworks-windows.exe
             dist/menuworks-linux
