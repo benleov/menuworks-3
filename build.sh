@@ -2,8 +2,15 @@
 # MenuWorks 3.0 Build Script (Unix/Linux/macOS)
 # Builds cross-platform binaries using local Go installation
 
-TARGET="${1:all}"
-VERSION="${2:-1.0.0}"
+TARGET="${1:-all}"
+
+# Read version from VERSION file
+if [ -f "VERSION" ]; then
+    VERSION=$(cat VERSION | tr -d '\n' | xargs)
+else
+    echo "Error: VERSION file not found"
+    exit 1
+fi
 
 # Set local Go path
 LOCAL_GO="$(pwd)/bin/go/bin/go"

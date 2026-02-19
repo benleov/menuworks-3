@@ -2,9 +2,15 @@
 # Builds cross-platform binaries using local Go installation
 
 param(
-    [string]$Target = "all",  # all, windows, linux, macos
-    [string]$Version = "1.0.0"
+    [string]$Target = "all"  # all, windows, linux, macos
 )
+
+# Read version from VERSION file
+$Version = (Get-Content "VERSION" -Raw).Trim()
+if (-not $Version) {
+    Write-Error "VERSION file is empty"
+    exit 1
+}
 
 # Set local Go path
 $localGo = Join-Path (Get-Location) "bin\go\bin\go.exe"
