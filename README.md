@@ -4,6 +4,12 @@ A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and 
 
 [![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/benleov/menuworks-3/releases/) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml) [![Release](https://github.com/benleov/menuworks-3/actions/workflows/release.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/release.yml)
 
+## Legal Note
+
+MenuWorks 3.0 is an independent modern implementation inspired by the original MenuWorks 2.10 (1987). This is a new application built from scratch in Go and is not affiliated with or derived from the original software.
+
+This project is created for educational and preservation purposes as homage to a classic DOS utility.
+
 ## Screenshots
 
 ### Retro theme
@@ -658,28 +664,9 @@ $env:GOOS = "linux"; $env:GOARCH = "arm64"
 go build -o dist/menuworks-arm64 cmd/menuworks/main.go
 ```
 
-## Future Enhancements
-
-- [ ] Mouse support (optional)
-- [ ] Colored menu items
-- [ ] Command aliases
-- [ ] Menu search/filter
-- [ ] User config directory
-- [ ] Menu item descriptions/help text
-- [ ] Command history/logging
-
 ## License
 
 MIT License — See LICENSE file for details.
 
-## Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Commit with clear messages
-4. Submit a pull request
-
----
 
 **MenuWorks 3.0** — Because menus never go out of style.

@@ -539,6 +539,11 @@ func (s *Screen) ShowItemHelp(command, help string, eventChan <-chan tcell.Event
 			if msgY >= startY+dialogHeight-3 {
 				break
 			}
+			// Handle empty lines (blank space)
+			if line == "" {
+				msgY++
+				continue
+			}
 			// Wrap text to fit dialog width
 			wrappedLines := WrapText(line, dialogWidth-4)
 			for _, wrappedLine := range wrappedLines {
