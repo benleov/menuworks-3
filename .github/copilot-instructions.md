@@ -3,10 +3,11 @@
 - **important** Be concise, use context wisely.
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
-- **important** Build via `.\build.ps1 -Target windows -Version 1.0.0` on windows.
-- **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
+- **important** Build via `.\build.ps1 -Target windows` on windows. Binary is placed in `.\dist`.
+- **important** Run tests via `.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
 - Dont use emojis unless needed for clarity. 
-
+**important** When showing a generate PR summary use the PULL_REQUEST_TEMPLATE.md file, and surround the text in a codefence so the user can copy paste it.
+**important** This codebase uses semver. Ensure that this is updated correctly when releasing.
 
 ## Project Goal
 Build a **single self‑contained Go binary** for **Windows, Linux, and macOS** that replicates the core functionality and user experience of **MenuWorks 2.10**, with a recognisable 1988 DOS aesthetic.  
