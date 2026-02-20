@@ -42,6 +42,24 @@ Download the latest binary for your platform:
 
 Place the binary anywhere, optionally alongside a `config.yaml` file.
 
+**Running Pre-Built Binaries:**
+
+```bash
+./menuworks-windows.exe      # Windows
+./menuworks-linux            # Linux
+./menuworks-macos            # macOS
+```
+
+**Platform Security Notes for Pre-Built Binaries:**
+
+On first run, you may see OS security warnings (unsigned binary). These are one-time:
+
+- **Windows**: Windows Defender SmartScreen appears → Click **"More Info"** → **"Run Anyway"**
+- **macOS**: Gatekeeper blocks the binary → Run: `xattr -rd com.apple.quarantine ./menuworks-macos`
+- **Linux**: No warnings
+
+Subsequent runs work without prompts. (See [Security & Trust](#security--trust) section for details.)
+
 ### Option 2: Build from Source
 
 **Requirements:**
@@ -67,36 +85,17 @@ chmod +x build.sh
 ./build.sh linux
 ```
 
-Binaries are output to `dist/`.
+Binaries are output to `dist/`. **No security warnings** when you build from source.
 
-### Running the Binary
+**Running Locally Built Binaries:**
 
 ```bash
-./menuworks-windows.exe      # Windows
-./menuworks-linux            # Linux
-./menuworks-macos            # macOS
+./dist/menuworks-windows.exe      # Windows
+./dist/menuworks-linux            # Linux
+./dist/menuworks-macos            # macOS
 ```
 
 The binary creates a default `config.yaml` on first run if one doesn't already exist.
-
-#### Platform-Specific Instructions
-
-**Windows:** 
-On first run, Windows Defender SmartScreen may appear. Click **"More Info"** → **"Run Anyway"** to proceed. Future runs will not show this warning.
-
-**macOS:**
-On first run, Gatekeeper will block the binary. Remove the quarantine attribute:
-
-```bash
-xattr -rd com.apple.quarantine ./menuworks-macos
-```
-
-Then run normally. Future runs will not show this warning.
-
-**Linux:**
-No special steps required. Run directly.
-
-(See [Security & Trust](#security--trust) section below for verification details.)
 
 ## Publishing Releases
 
