@@ -5,6 +5,9 @@
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version 1.0.0` on windows.
 - **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
+- Dont use emojis unless needed for clarity. 
+
+
 ## Project Goal
 Build a **single self‑contained Go binary** for **Windows, Linux, and macOS** that replicates the core functionality and user experience of **MenuWorks 2.10**, with a recognisable 1988 DOS aesthetic.  
 The UI should be retro, clean, responsive, and centered around **hierarchical menus** and **menu chaining**.
