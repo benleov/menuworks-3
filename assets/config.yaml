@@ -59,6 +59,7 @@ menus:
       - type: command
         label: "Show Date/Time"
         hotkey: "D"
+        help: "Displays the current date and time on your system."
         exec:
           windows: "echo Current date is %DATE% %TIME%"
           linux: "date"
@@ -67,6 +68,7 @@ menus:
       - type: command
         label: "Show Environment"
         hotkey: "E"
+        help: "Shows the current user logged into the system."
         exec:
           windows: "echo User: %USERNAME%"
           linux: "echo User: $USER"

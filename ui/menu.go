@@ -83,7 +83,7 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 
 	// Draw footer with helpful text
 	footerY := startY + menuHeight + 1
-	footerText := "UP/DOWN: Navigate | ENTER: Select | ESC: Back | R: Reload"
+	footerText := "↑↓: Navigate | ENTER: Select | ESC: Back | R: Reload | F2: Help"
 	if footerY < h {
 		s.DrawString(startX, footerY, footerText, StyleNormal())
 	}
@@ -498,3 +498,77 @@ func (s *Screen) DrawSplashScreen(version string) {
 
 	s.Sync()
 }
+
+// ShowItemHelp displays a dialog with command info and help text for a menu item
+func (s *Screen) ShowItemHelp(command, help string, eventChan <-chan tcell.Event) {
+	w, h := s.Size()
+
+	// Dialog dimensions
+	dialogWidth := 60
+	dialogHeight := 14
+	startX := (w - dialogWidth) / 2
+	startY := (h - dialogHeight) / 2
+
+	if startX < 0 {
+		startX = 0
+	}
+	if startY < 0 {
+		startY = 0
+	}
+
+	// Build the help dialog message
+	var messageLines []string
+	messageLines = append(messageLines, "Command:")
+	messageLines = append(messageLines, command)
+
+	// Add help text if available
+	if help != "" {
+		messageLines = append(messageLines, "")
+		messageLines = append(messageLines, help)
+	}
+
+	// Render loop
+	for {
+		s.ClearRect(0, 0, w, h)
+		s.DrawBorder(startX, startY, dialogWidth, dialogHeight, " Item Info ")
+
+		// Draw message lines
+		msgX := startX + 2
+		msgY := startY + 2
+		for _, line := range messageLines {
+			if msgY >= startY+dialogHeight-3 {
+				break
+			}
+			// Wrap text to fit dialog width
+			wrappedLines := WrapText(line, dialogWidth-4)
+			for _, wrappedLine := range wrappedLines {
+				if msgY >= startY+dialogHeight-3 {
+					break
+				}
+				if msgY < h {
+					s.DrawString(msgX, msgY, wrappedLine, StyleNormal())
+				}
+				msgY++
+			}
+		}
+
+		// Draw OK button
+		buttonY := startY + dialogHeight - 2
+		btnX := startX + (dialogWidth-len("[OK]"))/2 - 1
+		if buttonY < h {
+			s.DrawString(btnX, buttonY, "[OK]", StyleHighlight())
+		}
+
+		s.Sync()
+
+		// Handle input
+		ev := <-eventChan
+		if keyEv, ok := ev.(*tcell.EventKey); ok {
+			switch keyEv.Key() {
+			case tcell.KeyEnter, tcell.KeyEscape:
+				return
+			}
+		}
+	}
+}
+

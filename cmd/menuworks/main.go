@@ -388,6 +388,17 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 				}
 				navigator.Back()
 
+			case tcell.KeyF2:
+				// Show help for current item (if it's a command)
+				item, err := navigator.GetSelectedItem()
+				if err == nil && item.Type == "command" {
+					command := item.Exec.CommandForOS(exec.GetOS())
+					if command == "" {
+						command = "(No command defined for this platform)"
+					}
+					screen.ShowItemHelp(command, item.Help, eventChan)
+				}
+
 			case tcell.KeyRune:
 				if e.Rune() == 'R' || e.Rune() == 'r' {
 					// Reload config
