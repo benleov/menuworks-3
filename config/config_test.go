@@ -115,3 +115,28 @@ func TestCommandForOSFallbackEmpty(t *testing.T) {
 		t.Errorf("CommandForOS(linux) with empty variant: expected empty string, got %q", result)
 	}
 }
+
+func TestMenuItemHelpField(t *testing.T) {
+	// Test that MenuItem with Help field can be created
+	item := MenuItem{
+		Type:  "command",
+		Label: "Test Command",
+		Help:  "This is a test help message.",
+		Exec: ExecConfig{
+			Windows: "echo test",
+		},
+	}
+
+	if item.Help != "This is a test help message." {
+		t.Errorf("expected help %q, got %q", "This is a test help message.", item.Help)
+	}
+
+	if item.Type != "command" {
+		t.Errorf("expected type command, got %q", item.Type)
+	}
+
+	if item.Label != "Test Command" {
+		t.Errorf("expected label %q, got %q", "Test Command", item.Label)
+	}
+}
+

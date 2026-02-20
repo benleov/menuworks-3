@@ -4,6 +4,12 @@ A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and 
 
 [![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/benleov/menuworks-3/releases/) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml) [![Release](https://github.com/benleov/menuworks-3/actions/workflows/release.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/release.yml)
 
+## Legal Note
+
+MenuWorks 3.0 is an independent modern implementation inspired by the original MenuWorks 2.10 (1987). This is a new application built from scratch in Go and is not affiliated with or derived from the original software.
+
+This project is created for educational and preservation purposes as homage to a classic DOS utility.
+
 ## Screenshots
 
 ### Retro theme
@@ -23,6 +29,7 @@ A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and 
 - **Customizable Themes** — Define and switch between named color themes in the YAML config
 - **Hierarchical Menus** — Unlimited menu nesting with menu chaining via `target`
 - **Hotkeys** — Explicit hotkey assignment or auto-generated from menu labels
+- **Item Help Text** — Optional help descriptions for command items (press F2 to view)
 - **Configuration** — YAML-based config file (`config.yaml`) with embedded default fallback
 - **Cross-Platform Commands** — Execute shell commands (auto-detects Windows cmd.exe vs sh)
 - **Command Output Viewer** — Scrollable full-screen display of command output with ↑/↓ and PgUp/PgDn navigation
@@ -212,7 +219,7 @@ menus:
 
 | Type | Purpose | Fields |
 |------|---------|--------|
-| `command` | Run shell command | `label`, `exec` (OS variants), `hotkey` (optional), `showOutput` (optional) |
+| `command` | Run shell command | `label`, `exec` (OS variants), `hotkey` (optional), `help` (optional), `showOutput` (optional) |
 | `submenu` | Open another menu | `label`, `target` (menu name), `hotkey` (optional) |
 | `back` | Return to parent (or quit if root) | `label` |
 | `separator` | Visual divider | *(no other fields)* |
@@ -246,6 +253,40 @@ MenuWorks supports **OS-specific commands** via the `exec` field. Each command i
 - **Auto-assignment**: Left-to-right scan of the label for the first unused letter
   - Non-alphabetic characters are skipped
   - Example: "Run (Backup)" → scans R, U, N, B, A, C, K, U, P → uses first available
+
+### Help Text for Commands
+
+Command items can optionally include a `help` field to provide users with contextual information about what the command does. When a user selects a command item and presses **F2**, a dialog box appears showing:
+- The actual command that will be executed (OS-specific variant)
+- The help text, if provided
+
+**Example:**
+
+```yaml
+- type: command
+  label: "Show System Info"
+  hotkey: "I"
+  help: "Displays detailed information about your system hardware and OS."
+  exec:
+    windows: "systeminfo"
+    linux: "uname -a"
+    mac: "system_profiler SPSoftwareDataType"
+```
+
+When the user presses **F2** on this item, they see:
+```
+┌─ Item Info ─────────────────────────────┐
+│ Command:                                │
+│ systeminfo                              │
+│                                         │
+│ Displays detailed information about     │
+│ your system hardware and OS.            │
+│                                         │
+│             [OK]                        │
+└─────────────────────────────────────────┘
+```
+
+The `help` field is **optional** — if omitted, F2 still works and displays just the command.
 
 ### Command Output Display
 
@@ -314,6 +355,7 @@ Press **R** in any menu to reload your config **and apply the new theme** immedi
 | **→ / Enter** | Select/open submenu or execute command |
 | **← / Esc** | Return to parent menu (or quit at root); return to menu from output viewer |
 | **PgUp / PgDn** | Page up/down in output viewer |
+| **F2** | Show help dialog for the selected command item (displays command and optional help text) |
 | **R** | Reload config (in menu view only) |
 | **Hotkey** (A-Z) | Directly activate menu item |
 | **Any Other Key** | Return to menu from output viewer |
@@ -622,28 +664,9 @@ $env:GOOS = "linux"; $env:GOARCH = "arm64"
 go build -o dist/menuworks-arm64 cmd/menuworks/main.go
 ```
 
-## Future Enhancements
-
-- [ ] Mouse support (optional)
-- [ ] Colored menu items
-- [ ] Command aliases
-- [ ] Menu search/filter
-- [ ] User config directory
-- [ ] Menu item descriptions/help text
-- [ ] Command history/logging
-
 ## License
 
 MIT License — See LICENSE file for details.
 
-## Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Commit with clear messages
-4. Submit a pull request
-
----
 
 **MenuWorks 3.0** — Because menus never go out of style.

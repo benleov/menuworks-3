@@ -59,6 +59,7 @@ menus:
       - type: command
         label: "Show Date/Time"
         hotkey: "D"
+        help: "Displays the current date and time on your system."
         exec:
           windows: "echo Current date is %DATE% %TIME%"
           linux: "date"
@@ -67,6 +68,7 @@ menus:
       - type: command
         label: "Show Environment"
         hotkey: "E"
+        help: "Shows the current user logged into the system."
         exec:
           windows: "echo User: %USERNAME%"
           linux: "echo User: $USER"
@@ -83,6 +85,7 @@ menus:
       - type: command
         label: "Echo Test"
         hotkey: "E"
+        help: "Outputs a greeting message to demonstrate command execution."
         exec:
           windows: "echo Hello from MenuWorks!"
           linux: "echo Hello from MenuWorks!"
@@ -91,6 +94,7 @@ menus:
       - type: command
         label: "List System Info"
         hotkey: "L"
+        help: "Displays a sample utility command output."
         exec:
           windows: "echo This is a utility command"
           linux: "echo This is a utility command"

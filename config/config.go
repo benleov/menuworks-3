@@ -22,6 +22,7 @@ type MenuItem struct {
 	Target     string      `yaml:"target,omitempty"`     // for submenu type
 	Exec       ExecConfig  `yaml:"exec,omitempty"`       // for command type
 	ShowOutput *bool       `yaml:"showOutput,omitempty"` // for command type (default: true)
+	Help       string      `yaml:"help,omitempty"`       // for command type (optional help text)
 }
 
 // ExecConfig holds command execution details with OS-specific variants

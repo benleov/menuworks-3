@@ -5,6 +5,9 @@
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version 1.0.0` on windows.
 - **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
+- Dont use emojis unless needed for clarity. 
+
+
 ## Project Goal
 Build a **single self‑contained Go binary** for **Windows, Linux, and macOS** that replicates the core functionality and user experience of **MenuWorks 2.10**, with a recognisable 1988 DOS aesthetic.  
 The UI should be retro, clean, responsive, and centered around **hierarchical menus** and **menu chaining**.
@@ -357,6 +360,52 @@ The embedded default config in `/assets/` should contain:
 - **Always test on macOS when making event handling changes**—Windows may work while macOS hangs due to different event queue initialization.
 - If Windows works but macOS hangs, suspect event consumption issue (startup events not drained).
 - If both platforms hang after changes, suspect goroutine leak or deadlock.
+
+## Git Workflow — Feature Branches
+
+The project uses a feature-branch workflow for organized development:
+
+### Branch Naming
+Feature branches follow the pattern: `feature/<feature-name>`
+- Example: `feature/f2-help-dialog`, `feature/themes`, `feature/mouse-support`
+
+### Workflow Steps
+1. **Create feature branch from main:**
+   ```
+   git checkout main
+   git pull
+   git checkout -b feature/<feature-name>
+   ```
+
+2. **Develop and commit on the feature branch:**
+   - Make iterative commits with clear messages
+   - Build and test regularly (`.\build.ps1`, `.\test.ps1`)
+   - Ensure all tests pass before considering the feature complete
+
+3. **Complete and test the feature:**
+   - All config and menu tests pass (`.\test.ps1`)
+   - Binary builds without errors (`.\build.ps1 -Target windows -Version X.Y.Z`)
+   - Manual testing on Windows confirms feature works as intended
+   - Documentation (copilot-instructions.md, comments) is up to date
+
+4. **Merge to main when feature is complete:**
+   ```
+   git checkout main
+   git pull
+   git merge feature/<feature-name>
+   git push origin main
+   ```
+
+5. **Clean up feature branch:**
+   ```
+   git branch -d feature/<feature-name>
+   git push origin --delete feature/<feature-name>
+   ```
+
+### Release Workflow
+- Features are merged to `main` only when fully tested and ready for release
+- `main` always represents a stable, buildable state
+- Version numbers in built binaries (e.g., 1.0.0) are updated at release time via `build.ps1 -Version`
 
 ## Non‑Goals
 - No mouse support.
