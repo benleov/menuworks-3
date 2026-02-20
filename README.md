@@ -69,6 +69,35 @@ chmod +x build.sh
 
 Binaries are output to `dist/`.
 
+### Running the Binary
+
+```bash
+./menuworks-windows.exe      # Windows
+./menuworks-linux            # Linux
+./menuworks-macos            # macOS
+```
+
+The binary creates a default `config.yaml` on first run if one doesn't already exist.
+
+#### Platform-Specific Instructions
+
+**Windows:** 
+On first run, Windows Defender SmartScreen may appear. Click **"More Info"** → **"Run Anyway"** to proceed. Future runs will not show this warning.
+
+**macOS:**
+On first run, Gatekeeper will block the binary. Remove the quarantine attribute:
+
+```bash
+xattr -rd com.apple.quarantine ./menuworks-macos
+```
+
+Then run normally. Future runs will not show this warning.
+
+**Linux:**
+No special steps required. Run directly.
+
+(See [Security & Trust](#security--trust) section below for verification details.)
+
 ## Publishing Releases
 
 MenuWorks uses **GitHub Actions** to automatically build, test, and publish releases to GitHub Releases.
@@ -278,14 +307,6 @@ Press **R** in any menu to reload your config **and apply the new theme** immedi
 
 ## Usage
 
-### Running
-
-```bash
-./menuworks-windows.exe      # Windows
-./menuworks-linux            # Linux
-./menuworks-macos            # macOS
-```
-
 ### Navigation
 
 | Key | Action |
@@ -415,6 +436,86 @@ menus:
       
       - type: back
         label: "Back"
+```
+
+## Security & Trust
+
+### Binary Verification
+
+All released binaries include **SHA256 checksums** for integrity verification:
+
+```bash
+# Download both the binary and checksums.txt from the release
+# Verify the binary matches its checksum:
+sha256sum -c checksums.txt
+
+# macOS / BSD:
+shasum -a 256 -c checksums.txt
+
+# Windows PowerShell:
+(Get-FileHash menuworks-windows.exe -Algorithm SHA256).Hash -eq (Get-Content checksums.txt | Select-String "menuworks-windows.exe" | ForEach-Object { $_.ToString().Split()[0] })
+```
+
+### Platform Security Warnings
+
+MenuWorks only requires **write access to `config.yaml`** (in the binary's directory). It does not require:
+- Network access
+- System-wide installation
+- Administrative permissions
+- Access to other files or directories
+
+#### Windows: SmartScreen Warning
+
+**Why it appears:** Binaries from unknown publishers may trigger Windows Defender SmartScreen on first run.
+
+**What to do:**
+1. Download the binary from [GitHub Releases](https://github.com/benleov/menuworks-3/releases)
+2. **Verify the SHA256 checksum** (see above)
+3. When SmartScreen appears, click **"More Info"** → **"Run Anyway"**
+4. The binary is now trusted for future runs
+
+The warning is a one-time friction point; subsequent runs launch without prompts.
+
+#### macOS: Gatekeeper & Unsigned Binary
+
+**Why it appears:** Unsigned binaries are blocked by macOS Gatekeeper on first run.
+
+**What to do:**
+
+```bash
+# 1. Download binary from GitHub Releases
+# 2. Verify SHA256 checksum
+# 3. Make executable (if needed)
+chmod +x menuworks-macos
+
+# 4. Remove the quarantine attribute
+xattr -rd com.apple.quarantine ./menuworks-macos
+
+# 5. Run normally
+./menuworks-macos
+```
+
+After removing the quarantine attribute, subsequent runs work without prompts.
+
+**Why unsigned?** Code signing with a free certificate cannot bypass Apple's Gatekeeper completely (Gatekeeper only fully trusts paid Developer ID certificates). The approach above is standard for open-source projects distributed via GitHub.
+
+### Build Transparency
+
+MenuWorks builds are **deterministic and reproducible**:
+
+- Source code is public on [GitHub](https://github.com/benleov/menuworks-3)
+- Binaries are built on GitHub Actions (visible in [CI logs](https://github.com/benleov/menuworks-3/actions))
+- Build flags and Go version are documented in [release.yml](.github/workflows/release.yml)
+- All dependencies are pinned in [go.mod](go.mod) and [go.sum](go.sum)
+
+You can **build from source** using the included scripts (see [Build from Source](#option-2-build-from-source)) and verify the resulting binary matches the released version:
+
+```bash
+# Build from source
+./build.sh all
+
+# Compare checksums
+sha256sum dist/menuworks-linux
 ```
 
 ## Troubleshooting

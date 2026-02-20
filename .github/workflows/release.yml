@@ -50,31 +50,40 @@ jobs:
           
           # Windows 64-bit
           GOOS=windows GOARCH=amd64 go build \
-            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-windows.exe \
             cmd/menuworks/main.go
           echo "Built Windows"
           
           # Linux 64-bit
           GOOS=linux GOARCH=amd64 go build \
-            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-linux \
             cmd/menuworks/main.go
           echo "Built Linux"
           
           # macOS Intel 64-bit
           GOOS=darwin GOARCH=amd64 go build \
-            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-macos \
             cmd/menuworks/main.go
           echo "Built macOS (Intel)"
           
           # macOS Apple Silicon
           GOOS=darwin GOARCH=arm64 go build \
-            -ldflags "-X main.version=${{ steps.version.outputs.version }}" \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${{ steps.version.outputs.version }}" \
             -o dist/menuworks-macos-arm64 \
             cmd/menuworks/main.go
           echo "Built macOS (ARM64)"
+
+      - name: Set executable permissions on macOS binaries
+        run: |
+          chmod +x dist/menuworks-macos dist/menuworks-macos-arm64
+          ls -la dist/menuworks-macos*
 
       - name: Generate checksums
         run: |

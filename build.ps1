@@ -67,10 +67,10 @@ $targets.GetEnumerator() | ForEach-Object {
     $env:GOOS = $os
     $env:GOARCH = $arch
     
-    $ldFlags = "-X main.version=$Version"
+    $ldFlags = "-s -w -X main.version=$Version"
     $outputPath = "dist/$outputFile"
     
-    & $localGo build -ldflags $ldFlags -o $outputPath cmd/menuworks/main.go
+    & $localGo build -trimpath -ldflags $ldFlags -o $outputPath cmd/menuworks/main.go
     
     if ($LASTEXITCODE -eq 0) {
         $size = (Get-Item $outputPath).Length / 1MB

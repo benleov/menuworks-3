@@ -70,10 +70,10 @@ for output in "${!TARGETS[@]}"; do
     export GOOS="$os"
     export GOARCH="$arch"
     
-    LD_FLAGS="-X main.version=$VERSION"
+    LD_FLAGS="-s -w -X main.version=$VERSION"
     OUTPUT_PATH="dist/$output"
     
-    "$LOCAL_GO" build -ldflags "$LD_FLAGS" -o "$OUTPUT_PATH" cmd/menuworks/main.go
+    "$LOCAL_GO" build -trimpath -ldflags "$LD_FLAGS" -o "$OUTPUT_PATH" cmd/menuworks/main.go
     
     if [ $? -eq 0 ]; then
         SIZE=$(du -h "$OUTPUT_PATH" | cut -f1)
@@ -85,6 +85,17 @@ for output in "${!TARGETS[@]}"; do
 done
 
 echo ""
+
+# Set executable permissions and code signing for macOS binaries
+if [ "$os" = "darwin" ] || ([ -z "$os" ] && [[ -f "dist/menuworks-macos" || -f "dist/menuworks-macos-arm64" ]]); then
+    for macos_binary in dist/menuworks-macos dist/menuworks-macos-arm64; do
+        if [ -f "$macos_binary" ]; then
+            chmod +x "$macos_binary"
+            echo "  ✓ Set executable permissions: $macos_binary"
+        fi
+    done
+fi
+
 echo "Build complete: $SUCCESS_COUNT/$TOTAL_COUNT targets succeeded"
 
 # Clean environment
