@@ -1,4 +1,4 @@
-# MenuWorks 3.0
+# MenuWorks 3.X
 
 A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and macOS,  heavily inspired by the [MenuWorks 2.10](https://www.peteravritch.com/portfolio/menuworks21) application released in 1987. Built in Go with a single, self-contained binary that requires no external dependencies. Configuration is done via a single yaml file.
 
@@ -6,7 +6,7 @@ A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and 
 
 ## Legal Note
 
-MenuWorks 3.0 is an independent modern implementation inspired by the original MenuWorks 2.10 (1987). This is a new application built from scratch in Go and is not affiliated with or derived from the original software.
+MenuWorks 3.X is an independent modern implementation inspired by the original MenuWorks 2.10 (1987). This is a new application built from scratch in Go and is not affiliated with or derived from the original software.
 
 This project is created for educational and preservation purposes as homage to a classic DOS utility.
 
@@ -178,7 +178,7 @@ On first run, if `config.yaml` is missing, MenuWorks creates one with sample men
 ### Configuration Schema
 
 ```yaml
-title: "MenuWorks 3.0"
+title: "MenuWorks 3.X"
 
 items:
   - type: submenu
@@ -667,6 +667,3 @@ go build -o dist/menuworks-arm64 cmd/menuworks/main.go
 ## License
 
 MIT License — See LICENSE file for details.
-
-
-**MenuWorks 3.0** — Because menus never go out of style.

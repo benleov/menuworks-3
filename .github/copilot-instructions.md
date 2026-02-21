@@ -3,9 +3,16 @@
 - **important** Be concise, use context wisely.
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
-- **important** Build via `.\build.ps1 -Target windows -Version 1.0.0` on windows.
+- **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
 - **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
 - Dont use emojis unless needed for clarity. 
+
+## Versioning and Release
+- VERSION is the single source of truth for the release version.
+- Update VERSION and CHANGELOG.md together for every release.
+- Build with the VERSION value: `.\build.ps1 -Target windows -Version (Get-Content VERSION)`.
+- Tag releases as `v<VERSION>` and create a GitHub release from that tag.
+- Do not ship a release if VERSION, CHANGELOG.md, and the tag do not match.
 
 
 ## Project Goal
@@ -41,7 +48,7 @@ The top‑level `title:` and `items:` define the root menu.
 
 ### Example:
 ```yaml
-title: "MenuWorks 3.0"
+title: "MenuWorks 3.X"
 
 theme: "dark"
 
@@ -273,7 +280,7 @@ themes:
 
 ## Default Config Content
 The embedded default config in `/assets/` should contain:
-- Main menu: "MenuWorks 3.0"
+- Main menu: "MenuWorks 3.X"
 - Submenus: "System Tools" and "Utilities"
 - Safe cross-platform commands using `echo` (works on Windows, Linux, macOS)
 - Example separators

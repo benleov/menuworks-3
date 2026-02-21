@@ -1,5 +1,5 @@
 #!/bin/bash
-# MenuWorks 3.0 Build Script (Unix/Linux/macOS)
+# MenuWorks 3.X Build Script (Unix/Linux/macOS)
 # Builds cross-platform binaries using local Go installation
 
 TARGET="${1:-all}"
@@ -22,7 +22,7 @@ fi
 
 export PATH="$(pwd)/bin/go/bin:$PATH"
 
-echo "MenuWorks 3.0 Build System"
+echo "MenuWorks 3.X Build System"
 echo "Go: $LOCAL_GO"
 echo "Version: $VERSION"
 echo ""

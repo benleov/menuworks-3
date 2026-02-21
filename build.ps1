@@ -1,4 +1,4 @@
-# MenuWorks 3.0 Build Script (PowerShell)
+# MenuWorks 3.X Build Script (PowerShell)
 # Builds cross-platform binaries using local Go installation
 
 param(
@@ -21,7 +21,7 @@ if (-not (Test-Path $localGo)) {
 
 $env:PATH = "$(Join-Path (Get-Location) 'bin\go\bin');$env:PATH"
 
-Write-Host "MenuWorks 3.0 Build System" -ForegroundColor Cyan
+Write-Host "MenuWorks 3.X Build System" -ForegroundColor Cyan
 Write-Host "Go: $localGo" -ForegroundColor Gray
 Write-Host "Version: $Version" -ForegroundColor Gray
 Write-Host ""
