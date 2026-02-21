@@ -1,13 +1,14 @@
 # Copilot Instructions — Retro MenuWorks‑Style TUI (Go)
 
 - **important** Be concise, use context wisely.
-- **important** See [WORKFLOW.md](WORKFLOW.md) for the complete step-by-step agent workflow covering feature development, testing, PR creation, and release.
+- **important** See [WORKFLOW.md](WORKFLOW.md) for the complete step-by-step agent workflow covering feature development, testing, PR creation, and release. YOU MUST FOLLOW THIS WORKFLOW. DO NOT DEVIATE FROM THE STEPS.
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
 - **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
 - Dont use emojis unless needed for clarity. 
 - **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
+- **important** The agent must **NEVER** merge a PR without the user's **explicit approval**. After creating a PR and CI passes, STOP and wait. The user confirming that testing passed is NOT merge approval. Only proceed when the user explicitly says to merge (e.g. "merge it", "go ahead", "approved"). When in doubt, ask.
 
 ## Automated Agent-Driven Release Workflow
 

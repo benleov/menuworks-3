@@ -182,11 +182,18 @@ If checks are still pending, wait and re-run `gh pr checks` until they complete.
 
 Report the PR URL to the user. Inform them: **merging this PR will trigger the release pipeline** (or "no release" for docs-only changes).
 
+**STOP** here. Do NOT proceed to Step 10 until the user explicitly responds.
+
 ### 10. Merge and release
 
-Ask the user for approval to merge the PR.
-
-**STOP** until the user approves.
+> **MANDATORY APPROVAL GATE — DO NOT SKIP**
+>
+> The agent **MUST NOT** merge the PR or run `gh pr merge` until the user has **explicitly said to merge**.
+> Phrases like "looks good", "approved", "go ahead and merge", or "merge it" count as approval.
+> Phrases like "tested", "works", "all good" do **NOT** count — they confirm testing, not merge approval.
+> If in doubt, ask: "Ready to merge and tag v<VERSION>?"
+>
+> **STOP** and wait for the user's explicit merge approval.
 
 Merge via `gh` (squash merge, auto-deletes remote branch):
 
