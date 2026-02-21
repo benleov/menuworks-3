@@ -15,7 +15,9 @@ import (
 	"github.com/benworks/menuworks/ui"
 )
 
-var version = "1.0.0"
+// version is injected at build time via -ldflags "-X main.version=X.Y.Z"
+// Do not set a default value here - it should come from the build process
+var version string
 
 func main() {
 	// Get binary directory for config file

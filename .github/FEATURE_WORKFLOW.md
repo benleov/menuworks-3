@@ -1,11 +1,13 @@
 # Feature Development & Release Workflow
 
-This document provides a step-by-step process for developing and releasing features in MenuWorks.
+This document provides a step-by-step process for developing and releasing features in MenuWorks with **agent-managed releases**.
 
 ## Key Rules
 
 - **Do NOT push to main directly.** Always work from a feature branch (`feature/<feature-name>`).
-- **Do NOT rebase unless explicitly told.** Always use merge commits when integrating branches.
+- **Do NOT update VERSION manually.** The agent determines version bumps from conventional commits and handles releases.
+- **Use conventional commits.** Required for automatic version determination (feat/fix/docs/refactor/chore).
+- **Agent squash-merges features.** Each feature becomes one commit on main.
 
 ## Step 1: Prepare Your Repository
 
@@ -19,16 +21,9 @@ git status
 
 **Verify:** `git status` must show `nothing to commit, working tree clean`.
 
-## Step 2: Identify Feature & Version Bump
+## Step 2: Create Feature Branch
 
-- **Determine feature name** (lowercase, hyphens): e.g., `combined-menu-title`, `mouse-support`, `config-validation`
-- **Current version location:** [VERSION](../VERSION)
-- **Determine Version Bump:**
-  - **MAJOR:** Breaking changes (e.g., config format change) → e.g., `3.0.0` → `4.0.0`
-  - **MINOR:** New feature, backward compatible → e.g., `3.0.1` → `3.1.0`  
-  - **PATCH:** Bug fix only → e.g., `3.0.0` → `3.0.1`
-
-## Step 3: Create Feature Branch
+**Determine feature name** (lowercase, hyphens): e.g., `combined-menu-title`, `mouse-support`, `config-validation`
 
 ```powershell
 git checkout -b feature/<feature-name>
@@ -48,8 +43,13 @@ Before implementing, create a detailed plan that includes:
 1. **Files to modify** (with specific functions/lines)
 2. **Changes to make** (concise descriptions)
 3. **Tests to run** (manual + automated)
-4. **Version bump** (MAJOR/MINOR/PATCH)
-5. **CHANGELOG entry** (brief description of changes)
+4. **Ver3: Create & Confirm Implementation Plan
+
+Before implementing, create a detailed plan that includes:
+
+1. **Files to modify** (with specific functions/lines)
+2. **Changes to make** (concise descriptions)
+3. **Tests to run** (manual + automated)
 
 **Ask user for confirmation:**
 > Does this plan align with your intent?
@@ -58,29 +58,24 @@ Before implementing, create a detailed plan that includes:
 
 ---
 
-## Step 5: Implement the Feature
+## Step 4: Implement the Feature
 
 Execute the implementation plan step-by-step:
 
 1. Modify required source files
-2. Update VERSION file to new version number
-3. Add CHANGELOG.md entry under `[Unreleased]` → new `[X.Y.Z] - YYYY-MM-DD` section
-4. Make git commits with clear messages following conventional commit style:
-   - `feat:` for new features
-   - `fix:` for bug fixes  
+2. Make git commits with clear messages following **conventional commit style:**
+   - `feat:` for new features (→ MINOR version bump)
+   - `fix:` for bug fixes (→ PATCH version bump)
    - `refactor:` for code restructuring
    - `docs:` for documentation changes
+   - `chore:` for maintenance tasks
+   - Add `BREAKING CHANGE:` in commit body for MAJOR version bump
+
+**Do NOT update VERSION file** — agent handles versioning at merge time.
 
 ---
 
-## Step 6: Automated Testing
-
-Run the full test suite:
-
-```powershell
-.\test.ps1
-```
-
+## Step 5
 **Verify:** All tests pass (`ok` status, exit code 0). If tests fail, fix the issues before proceeding.
 
 ---
@@ -92,10 +87,10 @@ Run the full test suite:
 ```
 
 **Verify:** Build completes successfully. Output file at `dist/menuworks-windows.exe` should exist and be recent.
-
+6
 ---
 
-## Step 8: Manual Testing Instructions
+## Step 7: Manual Testing Instructions
 
 Provide the user with exact commands to manually test the feature:
 
@@ -126,43 +121,47 @@ Provide the user with exact commands to manually test the feature:
 
 ---
 
-## Step 9: User Manual Testing & Approval
+## Step 8: User Manual Testing & Approval
 
 **Wait for user to:**
 1. Run the binary
-2. Perform manual tests from Step 8
+2. Perform manual tests from Step 7
 3. Confirm feature works correctly
-4. Give approval to proceed: "Ready to merge" or "Ready for PR"
+4. Give approval to proceed: "Ready to merge" or "Approved"
 
 ---
 
-## Step 10: Prepare PR Summary
+## Step 9: Agent-Managed Release Process
 
-Create a clear PR summary with:
+**The agent handles the entire release automatically:**
 
-```markdown
-## Title
-[Feature Name]: [Brief description]
+1. **Determine version bump** from commit messages:
+   - `feat:` commits → MINOR bump (e.g., 3.0.0 → 3.1.0)
+   - `fix:` commits → PATCH bump (e.g., 3.0.1 → 3.0.2)
+   - `BREAKING CHANGE:` in body → MAJOR bump (e.g., 3.0.0 → 4.0.0)
 
-## Description
-Explain what the feature does and why it was added.
+2. **Squash-merge feature branch to main:**
+   - All feature commits become one commit
+   - Clear commit message with conventional format
 
-## Changes
-- [Specific change 1]
-- [Specific change 2]
-- Version bumped from X.Y.Z to A.B.C
+3. **Create and push git tag:**
+   - Tag format: `v<VERSION>` (e.g., `v3.1.0`)
+   - Tag triggers GitHub Actions release workflow
 
-## Testing
-- [Automated tests: .\test.ps1 passes]
-- [Manual tests: Feature verified as working]
+4. **GitHub Actions automatically:**
+   - Builds binaries (Windows, Linux, macOS Intel, macOS ARM)
+   - Generates checksums
+   - Creates GitHub Release with auto-generated notes
+   - Updates VERSION file and commits back to main
+   - Updates README badge
 
-## Files Modified
-- [file1.go](file1.go) - [what changed]
-- [file2.go](file2.go) - [what changed]
-- VERSION - bumped to A.B.C
-- CHANGELOG.md - added [A.B.C] entry
-```
+5. **Clean up:**
+   - Delete local feature branch
+   - Delete remote feature branch
 
+<<<<<<< HEAD
+**User involvement:** None required after approval — agent manages everything
+=======
 Provide this summary to the user and provide the GitHub PR creation link.
 
 ---
@@ -217,6 +216,7 @@ git push origin --delete feature/<feature-name>
    - **Release title:** `MenuWorks <VERSION>` (e.g., `MenuWorks 3.1.0`)
    - **Description:** Copy CHANGELOG.md entry for this version
 5. Click **Publish release**
+>>>>>>> main
 
 ---
 
@@ -272,25 +272,20 @@ git log --oneline -10
 git reset --soft COMMIT_HASH
 
 # Or reset to last pushed main
-git reset --soft origin/main
-```
+git reset --soft origRequesting Release
 
-### PR merged but forgot to update something
-- Create a new feature branch for the follow-up fix
-- Repeat this entire workflow for the correction
-- Do NOT attempt to revise a merged PR
+Use this checklist throughout the workflow:
 
----
-
-## Workflow Diagram
-
-```
-START
-  ↓
-[1] Prepare Repo (git pull, clean status)
-  ↓
-[2] Identify Feature & Version Bump
-  ↓
+- [ ] Repository is up to date (`git pull origin main`)
+- [ ] Feature branch created: `feature/<feature-name>`
+- [ ] Implementation plan created and **user confirmed**
+- [ ] All source changes completed
+- [ ] Commits use conventional format (`feat:`/`fix:`/`docs:`/`refactor:`/`chore:`)
+- [ ] Automated tests pass: `.\test.ps1`
+- [ ] Binary builds successfully: `.\build.ps1`
+- [ ] Manual tests completed and verified
+- [ ] **User approves changes**
+- [ ] Ready for agent to merge and release
 [3] Create Feature Branch
   ↓
 [4] Create Implementation Plan → [User Confirms?] → NO → [Revise Plan] → back to [4]
@@ -346,23 +341,66 @@ $ .\test.ps1
 # Step 7: Build
 $ .\build.ps1 -Target windows -Version 3.1.0
 # Output: ✓ menuworks-windows.exe (3.09 MB) ✓
-
-# Step 8-9: Manual Testing
-User runs:
-$ cd .\dist
-$ .\menuworks-windows.exe
-[Tests mouse clicks on menu items, resizing, etc.]
-User: "Feature works perfectly!"
-
-# Step 10-11: PR
-[PR created with title "Mouse Support: Enable menu navigation via mouse clicks"]
-[User reviews and approves on GitHub]
-
-# Step 12-13: Release
-$ git checkout main
-$ git pull origin main
-$ git branch -d feature/mouse-support
-$ git push origin --delete feature/mouse-support
-[Released on GitHub as v3.1.0]
+Create Feature Branch
+  ↓
+[3] Create Implementation Plan → [User Confirms?] → NO → [Revise Plan] → back to [3]
+                                    ↓ YES
+[4] Implement Feature (conventional commits)
+  ↓
+[5] Run Automated Tests → [Pass?] → NO → [Fix Issues] → back to [5]
+                           ↓ YES
+[6] Build Binary → [Success?] → NO → [Fix Build] → back to [6]
+                     ↓ YES
+[7] Provide Manual Testing Instructions
+  ↓
+[8] Wait for User Manual Testing → [Approve?] → NO → [Debug] → back to [4]
+                                      ↓ YES
+[9] Agent Manages Release:
+    - Determine version bump from commits
+    - Squash-merge to main
+    - Create & push git tag
+    - GitHub Actions builds & releases
+    - Clean up branches
+  ↓
+END (Version released, VERSION file synced)
 ```
 
+---
+
+## Example: Full Feature Workflow Session
+
+**Scenario:** Add mouse support feature
+
+```
+# Step 1-2: Prepare
+$ git checkout main
+$ git pull origin main
+$ git checkout -b feature/mouse-support
+
+# Step 3: Create plan
+Agent: "I'll add mouse click support in navigator.go, update event handling..."
+User: "Approved"
+
+# Step 4: Implement
+Agent modifies: menu/navigator.go, ui/menu.go, ui/screen.go
+$ git commit -m "feat: add mouse click support for menu navigation"
+
+# Step 5: Test
+$ .\test.ps1
+# Output: ok github.com/benworks/menuworks/menu ✓
+# Output: ok github.com/benworks/menuworks/config ✓
+
+# Step 6: Build
+$ .\build.ps1 -Target windows -Version (Get-Content VERSION)
+# Output: ✓ menuworks-windows.exe (3.09 MB) ✓
+
+# Step 7-8: Manual Testing
+Agent: "Please test: click menu items, verify selection changes..."
+User runs: .\dist\menuworks-windows.exe
+User: "Works perfectly!"
+
+# Step 9: Agent handles release
+Agent: "I detected 'feat:' commits, bumping MINOR: 3.1.0 → 3.2.0"
+Agent squash-merges, creates tag v3.2.0, pushes
+GitHub Actions builds and publishes release automatically
+Agent: "Release v3.2.0 published at github.com/benleov/menuworks-3/releases"

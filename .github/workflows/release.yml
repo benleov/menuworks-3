@@ -121,14 +121,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update version badge in README
+      - name: Sync VERSION file and update README badge
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
+          
+          # Update VERSION file
+          echo "$VERSION" > VERSION
+          
+          # Update README badge
           sed -i "s/badge\/version-[^-]*-blue/badge\/version-$VERSION-blue/" README.md
+          
+          # Commit and push changes
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git fetch origin main
           git checkout -B main origin/main
-          git add README.md
-          git commit -m "chore: Update version badge to $VERSION" || true
+          git add VERSION README.md
+          git commit -m "chore: sync VERSION to $VERSION and update README badge" || true
           git push origin main
