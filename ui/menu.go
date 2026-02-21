@@ -38,7 +38,7 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 	}
 
 	// Draw menu frame with menu background for borders
-	title := navigator.GetCurrentMenuTitle()
+	title := navigator.GetFormattedTitle()
 	s.DrawBorderWithStyle(startX, startY, menuWidth, menuHeight, " "+title+" ", StyleBorderMenuBg())
 	s.DrawShadow(startX, startY, menuWidth, menuHeight)
 
