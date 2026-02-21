@@ -83,7 +83,7 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 
 	// Draw footer with helpful text
 	footerY := startY + menuHeight + 1
-	footerText := "↑↓: Navigate | ENTER: Select | ESC: Back | R: Reload | F2: Help"
+	footerText := "↑↓/Scroll: Navigate | ENTER/Click: Select | ESC/RClick: Back | R: Reload | F2: Help"
 	if footerY < h {
 		s.DrawString(startX, footerY, footerText, StyleNormal())
 	}
@@ -323,7 +323,7 @@ func indexOf(items []config.MenuItem, target config.MenuItem) int {
 }
 
 // DrawDialog renders a dialog box with buttons
-func (s *Screen) DrawDialog(title, message string, buttons []string) int {
+func (s *Screen) DrawDialog(title, message string, buttons []string, eventChan <-chan tcell.Event) int {
 	w, h := s.Size()
 
 	// Dialog size
@@ -377,7 +377,7 @@ func (s *Screen) DrawDialog(title, message string, buttons []string) int {
 	// Simple event loop for button selection
 	selectedButton := 0
 	for {
-		ev := s.PollEvent()
+		ev := <-eventChan
 		switch e := ev.(type) {
 		case *tcell.EventKey:
 			switch e.Key() {

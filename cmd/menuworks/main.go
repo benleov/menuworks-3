@@ -447,6 +447,23 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 		case *tcell.EventResize:
 			// Just re-render on resize
 			continue
+
+		case *tcell.EventMouse:
+			switch e.Buttons() {
+			case tcell.ButtonPrimary:
+				// Left click = Enter/select
+				handleSelection()
+			case tcell.ButtonSecondary:
+				// Right click = Back/exit
+				if navigator.IsAtRoot() {
+					return
+				}
+				navigator.Back()
+			case tcell.WheelUp:
+				navigator.PrevSelectable()
+			case tcell.WheelDown:
+				navigator.NextSelectable()
+			}
 		}
 	}
 }

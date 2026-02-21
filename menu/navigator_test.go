@@ -79,3 +79,210 @@ func TestDisabledCommandNoOSVariant(t *testing.T) {
 		t.Fatalf("expected cross-platform command to not be disabled")
 	}
 }
+
+func TestNextSelectable(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "First", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "separator"},
+			{Type: "command", Label: "Second", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Third", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Start at first item (index 0)
+	if nav.GetSelectionIndex() != 0 {
+		t.Fatalf("expected initial selection at 0, got %d", nav.GetSelectionIndex())
+	}
+
+	// Next should skip separator (index 1) and land on index 2
+	nav.NextSelectable()
+	if nav.GetSelectionIndex() != 2 {
+		t.Fatalf("expected selection at 2 after NextSelectable, got %d", nav.GetSelectionIndex())
+	}
+
+	// Next again should go to index 3
+	nav.NextSelectable()
+	if nav.GetSelectionIndex() != 3 {
+		t.Fatalf("expected selection at 3, got %d", nav.GetSelectionIndex())
+	}
+
+	// Next should wrap around to index 0
+	nav.NextSelectable()
+	if nav.GetSelectionIndex() != 0 {
+		t.Fatalf("expected selection to wrap to 0, got %d", nav.GetSelectionIndex())
+	}
+}
+
+func TestPrevSelectable(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "First", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "separator"},
+			{Type: "command", Label: "Second", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Third", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Start at first item (index 0)
+	// Prev should wrap to last item (index 3)
+	nav.PrevSelectable()
+	if nav.GetSelectionIndex() != 3 {
+		t.Fatalf("expected selection to wrap to 3, got %d", nav.GetSelectionIndex())
+	}
+
+	// Prev should go to index 2
+	nav.PrevSelectable()
+	if nav.GetSelectionIndex() != 2 {
+		t.Fatalf("expected selection at 2, got %d", nav.GetSelectionIndex())
+	}
+
+	// Prev should skip separator (index 1) and land on index 0
+	nav.PrevSelectable()
+	if nav.GetSelectionIndex() != 0 {
+		t.Fatalf("expected selection at 0 after skipping separator, got %d", nav.GetSelectionIndex())
+	}
+}
+
+func TestBackFromSubmenu(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "submenu", Label: "Tools", Target: "tools"},
+		},
+		Menus: map[string]config.Menu{
+			"tools": {
+				Title: "Tools",
+				Items: []config.MenuItem{
+					{Type: "command", Label: "Date", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+				},
+			},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Should start at root
+	if !nav.IsAtRoot() {
+		t.Fatalf("expected to be at root")
+	}
+
+	// Open submenu
+	if err := nav.Open(); err != nil {
+		t.Fatalf("unexpected error opening submenu: %v", err)
+	}
+	if nav.IsAtRoot() {
+		t.Fatalf("expected to not be at root after opening submenu")
+	}
+	if nav.GetCurrentMenuName() != "tools" {
+		t.Fatalf("expected current menu to be 'tools', got %q", nav.GetCurrentMenuName())
+	}
+
+	// Back should return to root
+	nav.Back()
+	if !nav.IsAtRoot() {
+		t.Fatalf("expected to be at root after Back()")
+	}
+}
+
+func TestBackAtRootStaysAtRoot(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "Test", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+	if !nav.IsAtRoot() {
+		t.Fatalf("expected to be at root")
+	}
+
+	// Back at root should stay at root (not panic or crash)
+	nav.Back()
+	if !nav.IsAtRoot() {
+		t.Fatalf("expected to still be at root after Back() at root")
+	}
+}
+
+func TestOpenDisabledSubmenu(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "submenu", Label: "Missing", Target: "nonexistent"},
+		},
+		Menus: map[string]config.Menu{},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Opening a submenu with missing target should return error
+	err := nav.Open()
+	if err == nil {
+		t.Fatalf("expected error opening disabled submenu, got nil")
+	}
+
+	// Should still be at root
+	if !nav.IsAtRoot() {
+		t.Fatalf("expected to still be at root after failed Open()")
+	}
+}
+
+func TestNavigationPreservesSelectionAcrossMenus(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "submenu", Label: "Tools", Target: "tools"},
+			{Type: "command", Label: "Second", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+		Menus: map[string]config.Menu{
+			"tools": {
+				Title: "Tools",
+				Items: []config.MenuItem{
+					{Type: "command", Label: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+					{Type: "command", Label: "B", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+					{Type: "command", Label: "C", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+				},
+			},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Move to second item in root
+	nav.NextSelectable()
+	if nav.GetSelectionIndex() != 1 {
+		t.Fatalf("expected root selection at 1, got %d", nav.GetSelectionIndex())
+	}
+
+	// Go back to first item and open submenu
+	nav.PrevSelectable()
+	nav.Open()
+
+	// Move to third item in submenu
+	nav.NextSelectable()
+	nav.NextSelectable()
+	if nav.GetSelectionIndex() != 2 {
+		t.Fatalf("expected tools selection at 2, got %d", nav.GetSelectionIndex())
+	}
+
+	// Go back to root
+	nav.Back()
+
+	// Root selection should still be at 0 (where we left it)
+	if nav.GetSelectionIndex() != 0 {
+		t.Fatalf("expected root selection preserved at 0, got %d", nav.GetSelectionIndex())
+	}
+
+	// Re-enter submenu — selection should be remembered at 2
+	nav.Open()
+	if nav.GetSelectionIndex() != 2 {
+		t.Fatalf("expected tools selection remembered at 2, got %d", nav.GetSelectionIndex())
+	}
+}

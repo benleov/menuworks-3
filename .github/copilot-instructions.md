@@ -450,7 +450,6 @@ The embedded default config in `/assets/` should contain:
 The project uses a feature-branch workflow (`feature/<feature-name>`) with agent-managed releases. Conventional commits are required. Git tags are the authoritative version source. The agent must never push directly to `main` or edit the VERSION file manually.
 
 ## Non‑Goals
-- No mouse support.
 - No DOS emulation.
 - No pixel‑perfect reproduction.
 - No external theme files (themes may be embedded).
