@@ -14,6 +14,7 @@ type Navigator struct {
 	cfg              *config.Config
 	menuPath         []string           // Stack of menu names, e.g., ["root", "system"]
 	selectionIndex   map[string]int    // Remembers selection index for each menu
+	scrollOffset     map[string]int    // Scroll offset per menu for large menus
 	disabledItems    map[string]bool   // Tracks disabled submenu key names (e.g., "system:target_name")
 	errorReported    map[string]bool   // Track which missing targets have been reported
 	hotkeyMap        map[string]map[string]int // hotkeyMap[menuName][hotkey] = itemIndex
@@ -25,6 +26,7 @@ func NewNavigator(cfg *config.Config) *Navigator {
 		cfg:            cfg,
 		menuPath:       []string{"root"},
 		selectionIndex: make(map[string]int),
+		scrollOffset:   make(map[string]int),
 		disabledItems:  make(map[string]bool),
 		errorReported:  make(map[string]bool),
 		hotkeyMap:      make(map[string]map[string]int),
@@ -52,12 +54,14 @@ func (n *Navigator) buildHotkeys(menuName string, items []config.MenuItem) {
 	n.hotkeyMap[menuName] = make(map[string]int)
 	usedHotkeys := make(map[string]bool)
 
-	// First pass: mark explicitly defined hotkeys
+	// First pass: mark explicitly defined hotkeys (first one wins for duplicates)
 	for i, item := range items {
 		if item.Hotkey != "" {
 			hotkey := strings.ToUpper(item.Hotkey)
-			n.hotkeyMap[menuName][hotkey] = i
-			usedHotkeys[hotkey] = true
+			if !usedHotkeys[hotkey] {
+				n.hotkeyMap[menuName][hotkey] = i
+				usedHotkeys[hotkey] = true
+			}
 		}
 	}
 
@@ -196,6 +200,56 @@ func (n *Navigator) SetSelectionIndex(idx int) {
 	n.selectionIndex[menuName] = idx
 }
 
+// GetScrollOffset returns the current scroll offset for the active menu
+func (n *Navigator) GetScrollOffset() int {
+	menuName := n.GetCurrentMenuName()
+	if offset, exists := n.scrollOffset[menuName]; exists {
+		return offset
+	}
+	return 0
+}
+
+// SetScrollOffset sets the scroll offset for the active menu
+func (n *Navigator) SetScrollOffset(offset int) {
+	menuName := n.GetCurrentMenuName()
+	n.scrollOffset[menuName] = offset
+}
+
+// EnsureVisible adjusts the scroll offset so the selected item is within
+// the visible window of maxVisible lines. Call this before rendering.
+func (n *Navigator) EnsureVisible(maxVisible int) {
+	items := n.GetCurrentMenu()
+	totalItems := len(items)
+	if totalItems <= maxVisible {
+		// Everything fits, no scrolling needed
+		n.SetScrollOffset(0)
+		return
+	}
+
+	idx := n.GetSelectionIndex()
+	offset := n.GetScrollOffset()
+
+	// If selected item is above the visible window, scroll up
+	if idx < offset {
+		offset = idx
+	}
+	// If selected item is below the visible window, scroll down
+	if idx >= offset+maxVisible {
+		offset = idx - maxVisible + 1
+	}
+
+	// Clamp offset
+	maxOffset := totalItems - maxVisible
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	n.SetScrollOffset(offset)
+}
+
 // IsItemDisabled checks if an item is disabled (submenu with missing target)
 func (n *Navigator) IsItemDisabled(itemIndex int) bool {
 	menuName := n.GetCurrentMenuName()
@@ -281,6 +335,46 @@ func (n *Navigator) PrevSelectable() {
 
 	// Fallback: stay at current
 	n.SetSelectionIndex(currentIdx)
+}
+
+// PageDown moves selection down by pageSize items, skipping separators
+func (n *Navigator) PageDown(pageSize int) {
+	items := n.GetCurrentMenu()
+	currentIdx := n.GetSelectionIndex()
+	targetIdx := currentIdx + pageSize
+
+	// Clamp to last item (no wrapping for page navigation)
+	if targetIdx >= len(items) {
+		targetIdx = len(items) - 1
+	}
+
+	// Find nearest selectable item at or before target
+	for i := targetIdx; i > currentIdx; i-- {
+		if items[i].Type != "separator" {
+			n.SetSelectionIndex(i)
+			return
+		}
+	}
+}
+
+// PageUp moves selection up by pageSize items, skipping separators
+func (n *Navigator) PageUp(pageSize int) {
+	items := n.GetCurrentMenu()
+	currentIdx := n.GetSelectionIndex()
+	targetIdx := currentIdx - pageSize
+
+	// Clamp to first item (no wrapping for page navigation)
+	if targetIdx < 0 {
+		targetIdx = 0
+	}
+
+	// Find nearest selectable item at or after target
+	for i := targetIdx; i < currentIdx; i++ {
+		if items[i].Type != "separator" {
+			n.SetSelectionIndex(i)
+			return
+		}
+	}
 }
 
 // GetSelectedItem returns the currently selected item

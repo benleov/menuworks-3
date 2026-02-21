@@ -37,6 +37,7 @@ If you're interested in research into the binary format of the original MenuWork
 - **Command Output Viewer** — Scrollable full-screen display of command output with ↑/↓ and PgUp/PgDn navigation
 - **Dynamic Config Reload** — Press `R` in any menu to reload config without restarting
 - **Selection Memory** — Current menu position preserved during session (resets on config reload)
+- **Scrollable Menus** — Menus with more items than fit on screen scroll automatically with ▲/▼ indicators
 - **Graceful Error Handling** — Clear error dialogs for missing config, invalid YAML, and broken menu links
 
 ## Installation
@@ -371,7 +372,7 @@ All flags can also be set in `config.yaml` (see `initial_menu` and `splash_scree
 
 | Key | Action |
 |-----|--------|
-| **↑ / ↓** | Move selection (in menu); scroll up/down (in output viewer) |
+| **↑ / ↓** | Move selection (in menu, scrolls when needed); scroll up/down (in output viewer) |
 | **→ / Enter** | Select/open submenu or execute command |
 | **← / Esc** | Return to parent menu (or quit at root); return to menu from output viewer |
 | **PgUp / PgDn** | Page up/down in output viewer |

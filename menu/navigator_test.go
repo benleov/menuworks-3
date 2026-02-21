@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/benworks/menuworks/config"
@@ -348,5 +349,248 @@ func TestNavigateToMenu(t *testing.T) {
 	}
 	if !nav4.IsAtRoot() {
 		t.Fatal("expected to stay at root for 'root'")
+	}
+}
+
+func TestEnsureVisibleNoScrollNeeded(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "One", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Two", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Three", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+	// With maxVisible=10 and 3 items, offset should stay at 0
+	nav.EnsureVisible(10)
+	if nav.GetScrollOffset() != 0 {
+		t.Fatalf("expected scroll offset 0 when all items fit, got %d", nav.GetScrollOffset())
+	}
+
+	// Even after selecting last item
+	nav.SetSelectionIndex(2)
+	nav.EnsureVisible(10)
+	if nav.GetScrollOffset() != 0 {
+		t.Fatalf("expected scroll offset 0 when all items fit, got %d", nav.GetScrollOffset())
+	}
+}
+
+func TestEnsureVisibleScrollDown(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{
+		Title: "Root",
+		Items: items,
+	}
+
+	nav := NewNavigator(cfg)
+	maxVisible := 5
+
+	// Select item 7 (beyond visible window of 0..4)
+	nav.SetSelectionIndex(7)
+	nav.EnsureVisible(maxVisible)
+	// Offset should scroll so item 7 is the last visible: offset = 7 - 5 + 1 = 3
+	if nav.GetScrollOffset() != 3 {
+		t.Fatalf("expected scroll offset 3 to show item 7, got %d", nav.GetScrollOffset())
+	}
+
+	// Select last item (19)
+	nav.SetSelectionIndex(19)
+	nav.EnsureVisible(maxVisible)
+	// Offset should be 15 (max: 20 - 5)
+	if nav.GetScrollOffset() != 15 {
+		t.Fatalf("expected scroll offset 15 to show item 19, got %d", nav.GetScrollOffset())
+	}
+}
+
+func TestEnsureVisibleScrollUp(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{
+		Title: "Root",
+		Items: items,
+	}
+
+	nav := NewNavigator(cfg)
+	maxVisible := 5
+
+	// Scroll down first
+	nav.SetSelectionIndex(10)
+	nav.EnsureVisible(maxVisible)
+
+	// Now select an item above the current viewport
+	nav.SetSelectionIndex(2)
+	nav.EnsureVisible(maxVisible)
+	if nav.GetScrollOffset() != 2 {
+		t.Fatalf("expected scroll offset 2 to show item 2, got %d", nav.GetScrollOffset())
+	}
+
+	// Select first item
+	nav.SetSelectionIndex(0)
+	nav.EnsureVisible(maxVisible)
+	if nav.GetScrollOffset() != 0 {
+		t.Fatalf("expected scroll offset 0 to show item 0, got %d", nav.GetScrollOffset())
+	}
+}
+
+func TestScrollOffsetPerMenu(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	subItems := make([]config.MenuItem, 15)
+	for i := range subItems {
+		subItems[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Sub %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{
+		Title: "Root",
+		Items: append([]config.MenuItem{
+			{Type: "submenu", Label: "Tools", Target: "tools"},
+		}, items[1:]...),
+		Menus: map[string]config.Menu{
+			"tools": {
+				Title: "Tools",
+				Items: subItems,
+			},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+	maxVisible := 5
+
+	// Scroll down in root
+	nav.SetSelectionIndex(10)
+	nav.EnsureVisible(maxVisible)
+	rootOffset := nav.GetScrollOffset()
+	if rootOffset == 0 {
+		t.Fatal("expected non-zero scroll offset in root menu")
+	}
+
+	// Enter submenu
+	nav.SetSelectionIndex(0)
+	nav.Open()
+
+	// Submenu should start at offset 0
+	nav.EnsureVisible(maxVisible)
+	if nav.GetScrollOffset() != 0 {
+		t.Fatalf("expected scroll offset 0 in new submenu, got %d", nav.GetScrollOffset())
+	}
+
+	// Scroll in submenu
+	nav.SetSelectionIndex(12)
+	nav.EnsureVisible(maxVisible)
+	subOffset := nav.GetScrollOffset()
+	if subOffset == 0 {
+		t.Fatal("expected non-zero scroll offset in submenu")
+	}
+
+	// Go back to root
+	nav.Back()
+	nav.SetSelectionIndex(10)
+	nav.EnsureVisible(maxVisible)
+	if nav.GetScrollOffset() != rootOffset {
+		t.Fatalf("expected root scroll offset %d preserved, got %d", rootOffset, nav.GetScrollOffset())
+	}
+}
+
+func TestDuplicateExplicitHotkeys(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "Alpha", Hotkey: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Also A", Hotkey: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Third A", Hotkey: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// First item with hotkey "A" should win
+	if got := nav.SelectItemByHotkey("A"); got != 0 {
+		t.Fatalf("expected hotkey A to select first item (index 0), got %d", got)
+	}
+}
+
+func TestPageDownBasic(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{Title: "Root", Items: items}
+	nav := NewNavigator(cfg)
+
+	// Start at 0, page down by 5
+	nav.PageDown(5)
+	if nav.GetSelectionIndex() != 5 {
+		t.Fatalf("expected selection at 5 after PageDown(5), got %d", nav.GetSelectionIndex())
+	}
+
+	// Page down again
+	nav.PageDown(5)
+	if nav.GetSelectionIndex() != 10 {
+		t.Fatalf("expected selection at 10, got %d", nav.GetSelectionIndex())
+	}
+
+	// Page down past the end — should clamp to last item
+	nav.PageDown(100)
+	if nav.GetSelectionIndex() != 19 {
+		t.Fatalf("expected selection at 19 (last), got %d", nav.GetSelectionIndex())
+	}
+}
+
+func TestPageUpBasic(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{Title: "Root", Items: items}
+	nav := NewNavigator(cfg)
+
+	// Move to item 15 first
+	nav.SetSelectionIndex(15)
+
+	// Page up by 5
+	nav.PageUp(5)
+	if nav.GetSelectionIndex() != 10 {
+		t.Fatalf("expected selection at 10 after PageUp(5), got %d", nav.GetSelectionIndex())
+	}
+
+	// Page up past the beginning — should clamp to first item
+	nav.PageUp(100)
+	if nav.GetSelectionIndex() != 0 {
+		t.Fatalf("expected selection at 0 (first), got %d", nav.GetSelectionIndex())
+	}
+}
+
+func TestPageDownSkipsSeparators(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "Item 0", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Item 1", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Item 2", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "separator"},
+			{Type: "command", Label: "Item 4", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Page down by 3 from index 0 — target is index 3 (separator), should land on index 2
+	nav.PageDown(3)
+	if got := nav.GetSelectionIndex(); got != 2 {
+		t.Fatalf("expected PageDown to skip separator and land on 2, got %d", got)
 	}
 }
