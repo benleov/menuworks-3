@@ -172,6 +172,15 @@ func (n *Navigator) GetCurrentMenuTitle() string {
 	return ""
 }
 
+// GetFormattedTitle returns the title formatted for display with root title prefix for submenus
+func (n *Navigator) GetFormattedTitle() string {
+	menuName := n.GetCurrentMenuName()
+	if menuName == "root" {
+		return n.GetCurrentMenuTitle()
+	}
+	return n.cfg.Title + " - " + n.GetCurrentMenuTitle()
+}
+
 // GetSelectionIndex returns the current selection index
 func (n *Navigator) GetSelectionIndex() int {
 	menuName := n.GetCurrentMenuName()
