@@ -8,92 +8,86 @@
 - Dont use emojis unless needed for clarity. 
 - **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
 
-## Versioning and Release
+## Automated Agent-Driven Release Workflow
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (MAJOR.MINOR.PATCH).
 
-### VERSION as Single Source of Truth
-- **VERSION** file is the authoritative release version number (e.g., `3.0.1`).
-- CHANGELOG.md and git tags (e.g., `v3.0.1`) must always match VERSION.
-- If VERSION, CHANGELOG.md, and git tags disagree, do NOT release; warn the user immediately.
+### Single Source of Truth: Git Tags
+- **Git tags** (e.g., `v3.1.0`) are the authoritative version source.
+- **VERSION file** is auto-synced from tags by GitHub Actions for local build convenience.
+- **GitHub Releases** serve as the changelog with auto-generated release notes.
 
-### Git Workflow
-1. **Feature development:** Create `feature/<name>` branch from `main`.
-2. **Merge to main:** After testing and approval, merge feature branch back to `main`.
-3. **Prepare release:** Update VERSION and CHANGELOG.md on main (together, not separately).
-4. **Tag and release:** Create git tag and GitHub release matching the VERSION.
+### Agent-Managed Workflow
+The agent (GitHub Copilot) manages the entire release process:
 
-### Pre-Release Validation Checklist
-**Before updating VERSION or creating a release, verify:**
-- [ ] All tests pass: `.\test.ps1`
-- [ ] Binary builds successfully: `.\build.ps1 -Target windows -Version (Get-Content VERSION)`
-- [ ] VERSION file contains the intended release version (e.g., `3.0.1`).
-- [ ] CHANGELOG.md has an entry for the version with a date (e.g., `## [3.0.1] - 2026-02-21`).
-- [ ] CHANGELOG.md entry is placed above the previous release and below `[Unreleased]`.
-- [ ] The `[Unreleased]` section exists and is empty (or contains only planned unreleased work).
-- [ ] No git tag `v<VERSION>` already exists locally or on origin (avoid duplicates).
+1. **Feature Development:**
+   - Create `feature/<name>` branch from `main`
+   - No manual version updates on feature branches
+   - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
 
-### Release Steps
-1. **Ensure main is clean:**
-   ```
-   git checkout main
-   git pull origin main
-   git status
-   ```
-   (must show "nothing to commit, working tree clean")
+2. **Testing & Validation:**
+   - Agent runs: `.\test.ps1`
+   - Agent builds: `.\build.ps1 -Target windows -Version (Get-Content VERSION)`
+   - User performs manual testing and approves
 
-2. **Update VERSION and CHANGELOG.md on main:**
-   - Edit VERSION: set to the release version (e.g., `3.0.1`).
-   - Edit CHANGELOG.md: add `## [3.0.1] - <DATE>` section with fixes/features, above previous release.
-   - Commit together: `git add VERSION CHANGELOG.md && git commit -m "Bump version to 3.0.1"`.
-   - Push: `git push origin main`.
+3. **Release Process (Agent-Automated):**
+   - Agent determines version bump from commit messages:
+     - `feat:` → MINOR bump (e.g., 3.0.0 → 3.1.0)
+     - `fix:` → PATCH bump (e.g., 3.0.1 → 3.0.2)
+     - `BREAKING CHANGE:` in commit body → MAJOR bump (e.g., 3.0.0 → 4.0.0)
+   - Agent merges feature branch to `main` (squash merge)
+   - Agent creates and pushes git tag `v<VERSION>`
+   - GitHub Actions automatically:
+     - Builds binaries for Windows, Linux, macOS
+     - Creates GitHub Release with auto-generated notes
+     - Syncs VERSION file back to main
 
-3. **Build and test the release:**
-   ```
-   .\build.ps1 -Target windows -Version (Get-Content VERSION)
-   .\test.ps1
-   ```
-   (both must succeed without errors)
+### Conventional Commit Format
+Required for automatic version determination:
 
-4. **Create git tag:**
-   ```
-   git tag -a v3.0.1 -m "release: version 3.0.1"
-   git push origin v3.0.1
-   ```
+```
+<type>: <subject>
 
-5. **Create GitHub release:**
-   - Go to https://github.com/benleov/menuworks-3/releases/new
-   - Select tag `v3.0.1`
-   - Title: "MenuWorks 3.0.1"
-   - Description: copy the CHANGELOG.md entry for [3.0.1]
-   - Mark as latest (if this release should be current)
-   - Publish
+<optional body>
 
-### Warning Conditions (Alert User & Stop)
-**Warn the user and do NOT proceed if:**
-- VERSION file is empty or malformed (not a valid semver).
-- CHANGELOG.md has no entry matching the VERSION (missing section).
-- CHANGELOG.md entry is missing a date (e.g., `## [3.0.1]` without date).
-- A git tag `v<VERSION>` already exists on a different commit than current HEAD.
-- `git status` shows uncommitted changes before tagging.
-- Tests fail (`.\test.ps1` exit code != 0).
-- Build fails (`.\build.ps1` exit code != 0).
-- VERSION and CHANGELOG.md entries don't match (e.g., VERSION=3.0.1 but CHANGELOG=[3.0.2]).
-- User tries to update VERSION without simultaneously updating CHANGELOG.md in the same commit.
+<optional footer>
+```
 
-### Recovery from Release Mistakes
-**If you created a tag prematurely or incorrectly:**
-- Delete local tag: `git tag -d v3.0.1`
-- Delete remote tag: `git push origin :v3.0.1`
-- Fix the issue (update VERSION/CHANGELOG).
-- Re-create tag and push.
+**Types:**
+- `feat:` New feature (MINOR bump)
+- `fix:` Bug fix (PATCH bump)
+- `docs:` Documentation only
+- `refactor:` Code restructure without feature/fix
+- `chore:` Maintenance tasks
 
-**If you pushed a release but need to yank it:**
-- Delete git tag: `git tag -d v3.0.1 && git push origin :v3.0.1`
-- Delete GitHub release (via web UI).
-- Revert VERSION/CHANGELOG if needed: `git revert <commit>` or `git reset`.
-- Document the issue in the new [Unreleased] CHANGELOG entry.
+**Breaking changes:** Add `BREAKING CHANGE:` in commit body or footer for MAJOR bump.
 
+**Examples:**
+```
+feat: add mouse support for menu navigation
+
+fix: prevent crash when config.yaml is empty
+
+refactor: reorganize menu navigation code
+
+feat!: change config format to TOML
+
+BREAKING CHANGE: config.yaml replaced with config.toml
+```
+
+### Manual Release Steps (If Agent Unavailable)
+If the agent cannot manage the release:
+
+1. Ensure `main` is clean: `git status`
+2. Determine version bump (MAJOR/MINOR/PATCH)
+3. Create tag: `git tag -a v3.2.0 -m "release: version 3.2.0"`
+4. Push tag: `git push origin v3.2.0`
+5. GitHub Actions handles the rest automatically
+
+### Pre-Release Validation (Automated in CI)
+- `ci.yml` runs on every PR to validate tests pass
+- `release.yml` runs on tag push to build and release
+- VERSION file consistency checked in CI
 
 ## Project Goal
 Build a **single self‑contained Go binary** for **Windows, Linux, and macOS** that replicates the core functionality and user experience of **MenuWorks 2.10**, with a recognisable 1988 DOS aesthetic.  
@@ -452,7 +446,7 @@ The embedded default config in `/assets/` should contain:
 
 **→ See [FEATURE_WORKFLOW.md](FEATURE_WORKFLOW.md) for a complete step-by-step guide to feature development, testing, PR creation, and release.**
 
-The project uses a feature-branch workflow for organized development:
+The project uses a feature-branch workflow with agent-managed releases:
 
 ### Branch Naming
 Feature branches follow the pattern: `feature/<feature-name>`
@@ -467,34 +461,29 @@ Feature branches follow the pattern: `feature/<feature-name>`
    ```
 
 2. **Develop and commit on the feature branch:**
-   - Make iterative commits with clear messages
+   - Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`)
    - Build and test regularly (`.\build.ps1`, `.\test.ps1`)
    - Ensure all tests pass before considering the feature complete
+   - **Do NOT update VERSION file manually** (agent handles this)
 
 3. **Complete and test the feature:**
    - All config and menu tests pass (`.\test.ps1`)
-   - Binary builds without errors (`.\build.ps1 -Target windows -Version X.Y.Z`)
+   - Binary builds without errors (`.\build.ps1 -Target windows -Version (Get-Content VERSION)`)
    - Manual testing on Windows confirms feature works as intended
    - Documentation (copilot-instructions.md, comments) is up to date
 
-4. **Merge to main when feature is complete:**
-   ```
-   git checkout main
-   git pull
-   git merge feature/<feature-name>
-   git push origin main
-   ```
-
-5. **Clean up feature branch:**
-   ```
-   git branch -d feature/<feature-name>
-   git push origin --delete feature/<feature-name>
-   ```
+4. **Agent manages merge and release:**
+   - Agent determines version bump from conventional commits
+   - Agent squash-merges feature branch to main
+   - Agent creates git tag and pushes
+   - GitHub Actions builds and publishes release
+   - Agent syncs VERSION file
 
 ### Release Workflow
-- Features are merged to `main` only when fully tested and ready for release
+- Features are merged to `main` only when fully tested (agent validates)
 - `main` always represents a stable, buildable state
-- Version numbers in built binaries (e.g., 1.0.0) are updated at release time via `build.ps1 -Version`
+- Version numbers determined automatically from commit types (feat/fix/BREAKING CHANGE)
+- Git tags are the authoritative version source
 
 ## Non‑Goals
 - No mouse support.

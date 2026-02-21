@@ -2,13 +2,15 @@
 
 A **retro DOS-style hierarchical menu TUI application** for Windows, Linux, and macOS,  heavily inspired by the [MenuWorks 2.10](https://www.peteravritch.com/portfolio/menuworks21) application released in 1987. Built in Go with a single, self-contained binary that requires no external dependencies. Configuration is done via a single yaml file.
 
-[![Version](https://img.shields.io/badge/version-3.0.1-blue)](https://github.com/benleov/menuworks-3/releases/) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml) [![Release](https://github.com/benleov/menuworks-3/actions/workflows/release.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/release.yml)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com/benleov/menuworks-3/releases/) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey) [![CI Tests](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/ci.yml) [![Release](https://github.com/benleov/menuworks-3/actions/workflows/release.yml/badge.svg)](https://github.com/benleov/menuworks-3/actions/workflows/release.yml)
 
 ## Legal Note
 
 MenuWorks 3.X is an independent modern implementation inspired by the original MenuWorks 2.10 (1987). This is a new application built from scratch in Go and is not affiliated with or derived from the original software.
 
 This project is created for educational and preservation purposes as homage to a classic DOS utility.
+
+If you're interested in research into the binary format of the original MenuWorks, check out [this]Z() page.
 
 ## Screenshots
 
@@ -106,36 +108,40 @@ The binary creates a default `config.yaml` on first run if one doesn't already e
 
 ## Publishing Releases
 
-MenuWorks uses **GitHub Actions** to automatically build, test, and publish releases to GitHub Releases.
+MenuWorks uses an **agent-managed release workflow** powered by GitHub Actions. The agent (GitHub Copilot) handles version determination, tagging, and release automation.
 
-### How to Create a Release
+### Agent-Managed Release Process
 
-1. **Update CHANGELOG.md** with notes for the new version (optional — GitHub auto-generates from commits):
-   ```markdown
-   ## [1.1.0] - 2026-02-20
-   
-   ### Added
-   - New feature description
-   
-   ### Fixed
-   - Bug fix description
-   ```
+Releases are fully automated when the agent merges completed features:
 
-2. **Create and push a git tag** to trigger the release workflow:
-   ```bash
-   git tag v1.1.0
-   git push origin v1.1.0
-   ```
+1. **Agent determines version bump** from conventional commit messages:
+   - `feat:` commits → MINOR bump (e.g., 3.0.0 → 3.1.0)
+   - `fix:` commits → PATCH bump (e.g., 3.0.1 → 3.0.2)
+   - `BREAKING CHANGE:` in commit body → MAJOR bump (e.g., 3.0.0 → 4.0.0)
 
-3. **Wait for GitHub Actions to complete**:
-   - ✅ **CI Tests** runs: `./config` and `./menu` packages tested
-   - ✅ **Build & Release** runs (if tests pass):
-     - Cross-compiles for Windows, Linux, macOS (Intel + ARM64)
-     - Generates SHA256 checksums
-     - Creates GitHub Release with auto-generated release notes
-     - Uploads all 4 binaries + checksums.txt
+2. **Agent creates and pushes git tag** (e.g., `v3.1.0`):
+   - Tag push triggers GitHub Actions release workflow
 
-4. **Release automatically published** at [github.com/benworks/menuworks/releases](https://github.com/benworks/menuworks/releases)
+3. **GitHub Actions automatically**:
+   - ✅ Runs CI tests (`./config` and `./menu` packages)
+   - ✅ Cross-compiles for Windows, Linux, macOS (Intel + ARM64)
+   - ✅ Generates SHA256 checksums
+   - ✅ Creates GitHub Release with auto-generated release notes
+   - ✅ Updates VERSION file and commits back to main
+   - ✅ Updates README version badge
+
+4. **Release published** at [github.com/benleov/menuworks-3/releases](https://github.com/benleov/menuworks-3/releases)
+
+### Manual Release (If Agent Unavailable)
+
+If needed, releases can be triggered manually:
+
+```bash
+git tag -a v3.2.0 -m "release: version 3.2.0"
+git push origin v3.2.0
+```
+
+GitHub Actions handles the rest automatically.
 
 ### Release Artifacts
 
@@ -146,11 +152,13 @@ Each release includes:
 - `menuworks-macos-arm64` — macOS Apple Silicon (ARM64) executable
 - `checksums.txt` — SHA256 checksums for all binaries (verify integrity with `sha256sum -c checksums.txt`)
 
-### Version Injection
+### Version Management
 
-The version is automatically injected into the binary at compile-time via `-ldflags` when the tag is pushed. The binary displays the version in the splash screen on startup.
+**Git tags are the authoritative version source.** The VERSION file is auto-synced for local build convenience.
 
-**No manual version editing is required** — the tag name (e.g., `v1.0.0`) is extracted and passed to the build process.
+The version is automatically injected into the binary at compile-time via `-ldflags` from the git tag. The binary displays the version in the splash screen on startup.
+
+**No manual version editing is required** — the agent determines version bumps from conventional commits and creates tags automatically.
 
 ### Verify Checksums
 

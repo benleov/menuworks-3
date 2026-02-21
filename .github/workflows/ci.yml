@@ -24,6 +24,35 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - name: Version Consistency Check
+        run: |
+          # Fetch all tags
+          git fetch --tags
+          
+          # Get latest tag (if any)
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$LATEST_TAG" ] && [ -f "VERSION" ]; then
+            # Extract version from tag (remove 'v' prefix)
+            TAG_VERSION=${LATEST_TAG#v}
+            FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+            
+            echo "Latest git tag: $LATEST_TAG (version: $TAG_VERSION)"
+            echo "VERSION file contents: $FILE_VERSION"
+            
+            if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+              echo "ERROR: VERSION file ($FILE_VERSION) does not match latest tag ($TAG_VERSION)"
+              echo "This indicates VERSION file is out of sync with git tags."
+              echo "The release workflow will sync it automatically on next release."
+              # Note: We don't fail CI here as this is expected during development
+              # The VERSION file gets synced by release.yml after tag push
+            else
+              echo "✓ VERSION file matches latest tag"
+            fi
+          else
+            echo "Skipping version check (no tags yet or VERSION file missing)"
+          fi
+
       - name: Run tests
         run: |
           go test -v ./config
