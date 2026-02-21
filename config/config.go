@@ -119,6 +119,29 @@ func WriteDefault(filePath string) error {
 	return nil
 }
 
+// WriteDefaultWithBackup backs up the existing config and writes the embedded default.
+func WriteDefaultWithBackup(filePath string) error {
+	if _, err := os.Stat(filePath); err == nil {
+		data, readErr := os.ReadFile(filePath)
+		if readErr != nil {
+			return readErr
+		}
+		backupPath := filePath + ".bak"
+		if _, statErr := os.Stat(backupPath); statErr == nil {
+			return fmt.Errorf("backup file already exists: %s", backupPath)
+		} else if !os.IsNotExist(statErr) {
+			return statErr
+		}
+		if writeErr := os.WriteFile(backupPath, data, 0644); writeErr != nil {
+			return writeErr
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	return WriteDefault(filePath)
+}
+
 // Validate checks for invalid targets and item types
 func Validate(cfg *Config) []string {
 	var errs []string

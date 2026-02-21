@@ -6,6 +6,7 @@
 - **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
 - **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
 - Dont use emojis unless needed for clarity. 
+- **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
 
 ## Versioning and Release
 - VERSION is the single source of truth for the release version.

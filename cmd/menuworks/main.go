@@ -42,15 +42,17 @@ func main() {
 	ensureTerminalSize(screen, eventChan)
 
 	// Load configuration
-	cfg, wasCreated, err := config.Load(configPath)
-	if err != nil {
-		handleConfigError(screen, eventChan, configPath, err)
-		// If handleConfigError didn't exit, assume we should retry
-		cfg, _, err = config.Load(configPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Fatal: failed to load config: %v\n", err)
-			os.Exit(1)
+	var cfg *config.Config
+	wasCreated := false
+	for {
+		loadedCfg, created, loadErr := config.Load(configPath)
+		if loadErr == nil {
+			cfg = loadedCfg
+			wasCreated = created
+			break
 		}
+		handleConfigError(screen, eventChan, configPath, loadErr)
+		// If handleConfigError didn't exit, assume we should retry
 		wasCreated = false // Error recovery means not a fresh creation
 	}
 
@@ -184,14 +186,18 @@ func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPa
 		screen.ClearRect(0, 0, w, h)
 		screen.DrawBorder(startX, startY, dialogWidth, dialogHeight, " Config Error ")
 
-		// Draw error message
+		// Draw error message with wrapping
+		errorLines := ui.WrapText(fmt.Sprintf("%v", err), dialogWidth-4)
 		lines := []string{
 			"Failed to load configuration.",
-			fmt.Sprintf("Error: %v", err),
+			"Error:",
 		}
+		lines = append(lines, errorLines...)
 		msgY := startY + 2
+		buttonY := startY + dialogHeight - 3
+		maxLines := buttonY - msgY
 		for i, line := range lines {
-			if i >= 5 {
+			if i >= maxLines {
 				break
 			}
 			if msgY+i < h {
@@ -201,7 +207,6 @@ func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPa
 
 		// Draw buttons
 		buttons := []string{"Retry", "Use Default", "Exit"}
-		buttonY := startY + dialogHeight - 3
 		buttonSpacing := (dialogWidth - 4) / len(buttons)
 
 		for i, btn := range buttons {
@@ -233,10 +238,11 @@ func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPa
 				case 0: // Retry
 					return
 				case 1: // Use Default
-					if err := config.WriteDefault(configPath); err != nil {
-						fmt.Fprintf(os.Stderr, "Failed to write default config: %v\n", err)
-						os.Exit(1)
+					if err := config.WriteDefaultWithBackup(configPath); err != nil {
+						showErrorDialog(screen, eventChan, "Backup Exists", "A backup already exists. Remove config.yaml.bak or rename it, then try again.")
+						break
 					}
+					showMessageDialog(screen, eventChan, "Config Updated", "Default config written. Backup saved as config.yaml.bak.")
 					return
 				case 2: // Exit
 					os.Exit(0)
@@ -267,8 +273,17 @@ func showErrorDialog(screen *ui.Screen, eventChan <-chan tcell.Event, title, mes
 		screen.ClearRect(0, 0, w, h)
 		screen.DrawBorder(startX, startY, dialogWidth, dialogHeight, " "+title+" ")
 
-		// Draw message
-		lines := strings.Split(message, "\n")
+		// Draw message with wrapping (preserve explicit line breaks)
+		rawLines := strings.Split(message, "\n")
+		var lines []string
+		for _, rawLine := range rawLines {
+			wrapped := ui.WrapText(rawLine, dialogWidth-4)
+			if len(wrapped) == 0 {
+				lines = append(lines, "")
+				continue
+			}
+			lines = append(lines, wrapped...)
+		}
 		msgY := startY + 2
 		for i, line := range lines {
 			if i >= 5 {
