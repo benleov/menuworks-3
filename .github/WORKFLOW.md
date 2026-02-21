@@ -2,6 +2,13 @@
 
 Step-by-step instructions for the agent to develop, test, and release features in MenuWorks.
 
+## Prerequisites
+
+- **GitHub CLI (`gh`)** must be installed and authenticated.
+  - Install: Windows `winget install --id GitHub.cli` | macOS `brew install gh` | Linux: [instructions](https://github.com/cli/cli/blob/trunk/docs/install_linux.md)
+  - After installing, you may need to **restart your terminal**.
+  - Authenticate: `gh auth login` (follow prompts).
+
 ## Rules
 
 - Never push directly to `main`. Always use a feature branch.
@@ -23,10 +30,16 @@ git status --porcelain
 git checkout main
 git pull origin main
 git fetch --tags
+gh auth status
 ```
 
-**Success:** `git status --porcelain` output is empty. Checkout, pull, and fetch complete without errors.
+**Success:** `git status --porcelain` output is empty. Checkout, pull, and fetch complete without errors. `gh auth status` shows a logged-in account.
+
 **STOP** if working copy is dirty. Tell the user what files are dirty.
+
+**STOP** if `gh` is not recognised ("not recognized as a name of a cmdlet" / "command not found"). Tell the user to install `gh` (see Prerequisites) and restart their terminal.
+
+**STOP** if `gh` reports "To get started with GitHub CLI, please run: gh auth login". Tell the user to run `gh auth login`.
 
 ### 2. Determine version
 
@@ -125,7 +138,7 @@ Provide the user with exact testing instructions:
 
 **STOP** until the user confirms the feature works correctly.
 
-### 9. Push and provide PR summary
+### 9. Push and create PR
 
 If any changes were made after manual testing (e.g. fixes from user feedback), commit them before pushing.
 
@@ -133,10 +146,10 @@ If any changes were made after manual testing (e.g. fixes from user feedback), c
 git push origin feature/<feature-name>
 ```
 
-Present the user with a filled-in PR description using the project's PR template (`.github/PULL_REQUEST_TEMPLATE.md`):
+Create the PR using `gh`, with the body following the project's PR template (`.github/PULL_REQUEST_TEMPLATE.md`):
 
-````
-```
+```powershell
+gh pr create --base main --title "<type>: <description>" --body @'
 ## Description
 <concise summary of what this PR changes>
 
@@ -151,35 +164,46 @@ Present the user with a filled-in PR description using the project's PR template
 
 ## Related Changes
 <list files/areas affected>
-```
-````
-
-Provide the PR creation link:
-
-```
-https://github.com/benleov/menuworks-3/pull/new/feature/<feature-name>
+'@
 ```
 
-Inform the user: **Merging this PR will trigger the release pipeline** (or "no release" for docs-only changes).
+**STOP** if PR creation fails. Inform the user.
 
-Ask the user to confirm the PR has been created before proceeding.
+Wait for CI checks to pass:
 
-### 10. Post-merge release
+```powershell
+gh pr checks --watch
+```
 
-Tell the user: **Let me know when the PR is merged so I can tag the release.**
+**STOP** if CI checks fail. Inform the user of the failure details.
 
-**STOP** and wait for the user to confirm the PR has been merged.
+Report the PR URL to the user. Inform them: **merging this PR will trigger the release pipeline** (or "no release" for docs-only changes).
 
-Once confirmed:
+### 10. Merge and release
+
+Ask the user for approval to merge the PR.
+
+**STOP** until the user approves.
+
+Merge via `gh` (squash merge, auto-deletes remote branch):
+
+```powershell
+gh pr merge --squash --delete-branch
+```
+
+Sync local repo:
 
 ```powershell
 git checkout main
 git pull origin main
+```
+
+Tag the release (skip for `docs`/`refactor`/`chore` changes):
+
+```powershell
 git tag -a v<VERSION> -m "release: version <VERSION>"
 git push origin v<VERSION>
 ```
-
-Skip tagging for no-release changes (`docs`/`refactor`/`chore` only).
 
 GitHub Actions will automatically:
 - Build binaries (Windows, Linux, macOS Intel, macOS ARM)
@@ -187,13 +211,11 @@ GitHub Actions will automatically:
 - Create GitHub Release with auto-generated notes
 - Sync VERSION file back to main
 
-Clean up:
+Clean up local branch:
 
 ```powershell
-# Use -D (force) because squash-merge means git won't recognise the branch as merged
+# Use -D because squash-merge means git won't recognise the branch as merged
 git branch -D feature/<feature-name>
-# Remote branch may already be deleted by GitHub — ignore errors
-git push origin --delete feature/<feature-name> 2>$null
 ```
 
 Ask the user to verify the release is published at:
@@ -218,6 +240,12 @@ https://github.com/benleov/menuworks-3/releases
 ---
 
 ## Error Recovery
+
+**`gh` not installed:**
+User sees "not recognized" / "command not found". Install `gh` (see Prerequisites), restart terminal.
+
+**`gh` not authenticated:**
+User sees "please run: gh auth login". Run `gh auth login` and follow prompts.
 
 **Tests fail after merge to main:**
 Create a hotfix branch (`hotfix/<issue>`), fix with a `fix:` commit, repeat workflow from Step 6.
