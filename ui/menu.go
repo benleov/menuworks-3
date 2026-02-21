@@ -65,6 +65,10 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 	contentStartY := startY + 3
 	maxItems := menuHeight - 4
 
+	// Ensure selected item is visible (adjusts scroll offset)
+	navigator.EnsureVisible(maxItems)
+	scrollOffset := navigator.GetScrollOffset()
+
 	// Filter selectable items and draw them
 	selectableCount := 0
 	for _, item := range items {
@@ -78,7 +82,21 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 	if selectableCount == 0 {
 		s.drawEmptyMenuPlaceholder(startX, contentStartY, menuWidth, maxItems)
 	} else {
-		s.drawMenuItems(startX, contentStartY, menuWidth, maxItems, items, selectedIdx, navigator)
+		s.drawMenuItems(startX, contentStartY, menuWidth, maxItems, items, selectedIdx, navigator, scrollOffset)
+	}
+
+	// Draw scroll indicators on the right border
+	hasMore := len(items) > maxItems
+	if hasMore {
+		indicatorX := startX + menuWidth - 2
+		if scrollOffset > 0 {
+			// Items above - draw up arrow at top of content area
+			s.DrawChar(indicatorX, contentStartY, '▲', StyleBorderMenuBg())
+		}
+		if scrollOffset+maxItems < len(items) {
+			// Items below - draw down arrow at bottom of content area
+			s.DrawChar(indicatorX, contentStartY+maxItems-1, '▼', StyleBorderMenuBg())
+		}
 	}
 
 	// Draw footer with helpful text
@@ -198,14 +216,17 @@ func (s *Screen) drawEmptyMenuPlaceholder(x, y, width, height int) {
 	}
 }
 
-// drawMenuItems draws all menu items
-func (s *Screen) drawMenuItems(x, y, width, maxItems int, items []config.MenuItem, selectedIdx int, navigator *menu.Navigator) {
+// drawMenuItems draws all menu items with scrolling support
+func (s *Screen) drawMenuItems(x, y, width, maxItems int, items []config.MenuItem, selectedIdx int, navigator *menu.Navigator, scrollOffset int) {
 	contentLineIdx := 0
 
-	for i, item := range items {
+	// Start from scrollOffset and render up to maxItems visible lines
+	for i := scrollOffset; i < len(items); i++ {
 		if contentLineIdx >= maxItems {
 			break
 		}
+
+		item := items[i]
 
 		if item.Type == "separator" {
 			// Draw separator line with border color on menu background

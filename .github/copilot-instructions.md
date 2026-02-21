@@ -1,7 +1,7 @@
 # Copilot Instructions — Retro MenuWorks‑Style TUI (Go)
 
 - **important** Be concise, use context wisely.
-- **important** See [WORKFLOW.md](WORKFLOW.md) for the complete step-by-step agent workflow covering feature development, testing, PR creation, and release. YOU MUST FOLLOW THIS WORKFLOW. DO NOT DEVIATE FROM THE STEPS.
+- **important** See [WORKFLOW.md](./WORKFLOW.md) for the complete step-by-step agent workflow covering feature development, testing, PR creation, and release. YOU MUST FOLLOW THIS WORKFLOW WHEN MODIFYING CODE. DO NOT DEVIATE FROM THE STEPS.
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
