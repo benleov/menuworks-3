@@ -16,28 +16,19 @@ Step-by-step instructions for the agent to develop, test, and release features i
 
 ## Steps
 
-### 1. Verify clean working copy
+### 1. Verify repo state
 
 ```powershell
 git status --porcelain
-```
-
-**Success:** Output is empty.
-**STOP** if output is non-empty. Tell the user what files are dirty.
-
-### 2. Switch to main
-
-```powershell
 git checkout main
-```
-
-### 3. Pull latest
-
-```powershell
 git pull origin main
+git fetch --tags
 ```
 
-### 4. Determine version
+**Success:** `git status --porcelain` output is empty. Checkout, pull, and fetch complete without errors.
+**STOP** if working copy is dirty. Tell the user what files are dirty.
+
+### 2. Determine version
 
 Read the current version:
 
@@ -45,25 +36,31 @@ Read the current version:
 git describe --tags --abbrev=0
 ```
 
+**STOP** if this command fails (e.g. no tags exist). Fall back to reading the VERSION file (`Get-Content VERSION`). If both fail, ask the user for the current version.
+
+The output includes a `v` prefix (e.g. `v3.1.0`). Strip it to get the bare version number (e.g. `3.1.0`).
+
 Ask the user: **What type of change is this?**
 - `feat` → MINOR bump (e.g. 3.1.0 → 3.2.0)
 - `fix` → PATCH bump (e.g. 3.1.0 → 3.1.1)
 - `breaking` → MAJOR bump (e.g. 3.1.0 → 4.0.0)
 - `docs` / `refactor` / `chore` → no version bump
 
-**STOP** if docs/refactor/chore only. Inform the user no release is needed and ask how to proceed.
+If `docs`/`refactor`/`chore` only: inform the user no release is needed. The workflow may still proceed (branch, implement, PR) but skip version bumping and tagging in Step 10. Ask the user whether to continue or stop.
 
 Calculate the new version number and confirm it with the user before continuing.
 
-### 5. Create feature branch
+### 3. Create feature branch
+
+Derive the branch name from the feature description (lowercase, hyphens). Confirm with the user if the name is unclear.
 
 ```powershell
 git checkout -b feature/<feature-name>
 ```
 
-Branch name should be lowercase with hyphens (e.g. `feature/theme-support`).
+**STOP** if branch creation fails (e.g. branch already exists). Inform the user and ask how to proceed.
 
-### 6. Create implementation plan
+### 4. Create implementation plan
 
 Research the codebase, then present a plan to the user containing:
 1. Files to modify (with specific functions/areas)
@@ -72,9 +69,9 @@ Research the codebase, then present a plan to the user containing:
 
 **STOP** until the user approves the plan.
 
-### 7. Implement
+### 5. Implement
 
-Make changes and commit with conventional commits:
+Make changes and commit with conventional commits. One or more commits on the feature branch are fine; they will be squashed when the PR is merged.
 
 ```powershell
 git add <files>
@@ -83,7 +80,7 @@ git commit -m "<type>: <description>"
 
 Do **NOT** update the VERSION file.
 
-### 8. Run tests
+### 6. Run tests
 
 ```powershell
 .\test.ps1
@@ -92,39 +89,39 @@ Do **NOT** update the VERSION file.
 **Success:** All packages show `ok` status, exit code 0.
 **STOP** if any test fails. Fix and re-run before continuing.
 
-### 9. Build binary
+### 7. Build binary
 
 ```powershell
 .\build.ps1 -Target windows -Version <new-version>
 ```
 
-Use the version determined in Step 4.
+Use the version determined in Step 2. For no-release changes, use the current version.
 
 **Success:** `dist/menuworks-windows.exe` exists and build output shows no errors.
 **STOP** if build fails. Fix and re-run.
 
-### 10. Request manual testing
+### 8. Request manual testing
 
 Provide the user with exact testing instructions:
 
 ```
 1. cd .\dist
 2. .\menuworks-windows.exe
-3. Test:
+3. Test the feature:
    - [Feature-specific scenario 1]
    - [Feature-specific scenario 2]
-   - [Feature-specific scenario 3]
-4. Verify normal operation:
-   - Execute a command
+4. Regression test:
+   - Navigate between menus and submenus
+   - Execute a command and verify output
    - Press R to reload config
    - Exit via Back/Quit
 ```
 
 **STOP** until the user confirms the feature works correctly.
 
-### 11. Push and provide PR summary
+### 9. Push and provide PR summary
 
-Commit any remaining changes, then push:
+If any changes were made after manual testing (e.g. fixes from user feedback), commit them before pushing.
 
 ```powershell
 git push origin feature/<feature-name>
@@ -156,9 +153,15 @@ https://github.com/benleov/menuworks-3/pull/new/feature/<feature-name>
 
 Inform the user: **Merging this PR will trigger the release pipeline.**
 
-### 12. Post-merge release
+Ask the user to confirm the PR has been created before proceeding.
 
-After the user merges the PR on GitHub:
+### 10. Post-merge release
+
+Tell the user: **Let me know when the PR is merged so I can tag the release.**
+
+**STOP** and wait for the user to confirm the PR has been merged.
+
+Once confirmed:
 
 ```powershell
 git checkout main
@@ -166,6 +169,8 @@ git pull origin main
 git tag -a v<VERSION> -m "release: version <VERSION>"
 git push origin v<VERSION>
 ```
+
+Skip tagging for no-release changes (`docs`/`refactor`/`chore` only).
 
 GitHub Actions will automatically:
 - Build binaries (Windows, Linux, macOS Intel, macOS ARM)
@@ -180,7 +185,11 @@ git branch -d feature/<feature-name>
 git push origin --delete feature/<feature-name>
 ```
 
-Verify the release was published and report to the user.
+Ask the user to verify the release is published at:
+
+```
+https://github.com/benleov/menuworks-3/releases
+```
 
 ---
 
@@ -200,7 +209,7 @@ Verify the release was published and report to the user.
 ## Error Recovery
 
 **Tests fail after merge to main:**
-Create a hotfix branch (`hotfix/<issue>`), fix with a `fix:` commit, repeat workflow from Step 8.
+Create a hotfix branch (`hotfix/<issue>`), fix with a `fix:` commit, repeat workflow from Step 6.
 
 **Tag already exists:**
 ```powershell
