@@ -59,6 +59,15 @@ Place the binary anywhere, optionally alongside a `config.yaml` file.
 ./menuworks-macos            # macOS
 ```
 
+**Custom config file location:**
+
+```bash
+./menuworks-windows.exe -config C:\path\to\my-config.yaml
+./menuworks-linux -config /etc/menuworks/config.yaml
+```
+
+If `-config` is not specified, MenuWorks looks for `config.yaml` in the same directory as the binary.
+
 **Platform Security Notes for Pre-Built Binaries:**
 
 On first run, you may see OS security warnings (unsigned binary). These are one-time:
@@ -349,6 +358,12 @@ Press **R** in any menu to reload your config **and apply the new theme** immedi
 
 ## Usage
 
+### Command-Line Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-config <path>` | Path to config.yaml file | Same directory as binary |
+
 ### Navigation
 
 | Key | Action |
@@ -566,10 +581,10 @@ sha256sum dist/menuworks-linux
 ### Config File Not Found
 
 MenuWorks looks for `config.yaml` in:
-1. Same directory as the binary
-2. Current working directory
+1. The path specified by `-config` flag (if provided)
+2. Same directory as the binary (default)
 
-If neither exists, MenuWorks creates the embedded default config.
+If neither exists, MenuWorks creates the embedded default config at the resolved path.
 
 ### YAML Parse Error
 

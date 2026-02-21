@@ -79,6 +79,7 @@ Research the codebase, then present a plan to the user containing:
 1. Files to modify (with specific functions/areas)
 2. Changes to make (concise descriptions)
 3. Test scenarios (automated - adding new unit tests to cover new functionality, or updating existing + manual tests for the user to verify)
+4. Ensure that documentation is up to date, including the `README.md` file, and `.github/copilot-instructions.md`.
 
 **STOP** until the user approves the plan.
 

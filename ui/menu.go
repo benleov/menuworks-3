@@ -426,29 +426,49 @@ func (s *Screen) DrawDialog(title, message string, buttons []string, eventChan <
 
 // WrapText wraps text to fit within maxWidth
 func WrapText(text string, maxWidth int) []string {
+	if maxWidth < 1 {
+		maxWidth = 1
+	}
 	var lines []string
-	words := strings.Fields(text)
-	var currentLine string
-
-	for _, word := range words {
-		if len(currentLine)+1+len(word) <= maxWidth {
-			if currentLine == "" {
-				currentLine = word
+	// Split on explicit newlines first, then wrap each paragraph
+	paragraphs := strings.Split(text, "\n")
+	for _, para := range paragraphs {
+		words := strings.Fields(para)
+		if len(words) == 0 {
+			lines = append(lines, "")
+			continue
+		}
+		var currentLine string
+		for _, word := range words {
+			// If the word itself is longer than maxWidth, hard-break it
+			for len(word) > maxWidth {
+				if currentLine != "" {
+					lines = append(lines, currentLine)
+					currentLine = ""
+				}
+				lines = append(lines, word[:maxWidth])
+				word = word[maxWidth:]
+			}
+			if len(word) == 0 {
+				continue
+			}
+			if len(currentLine)+1+len(word) <= maxWidth {
+				if currentLine == "" {
+					currentLine = word
+				} else {
+					currentLine += " " + word
+				}
 			} else {
-				currentLine += " " + word
+				if currentLine != "" {
+					lines = append(lines, currentLine)
+				}
+				currentLine = word
 			}
-		} else {
-			if currentLine != "" {
-				lines = append(lines, currentLine)
-			}
-			currentLine = word
+		}
+		if currentLine != "" {
+			lines = append(lines, currentLine)
 		}
 	}
-
-	if currentLine != "" {
-		lines = append(lines, currentLine)
-	}
-
 	return lines
 }
 

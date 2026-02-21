@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,14 +21,30 @@ import (
 var version string
 
 func main() {
-	// Get binary directory for config file
-	ex, err := os.Executable()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to determine executable path: %v\n", err)
-		os.Exit(1)
-	}
+	// Parse command-line flags
+	configFlag := flag.String("config", "", "Path to config.yaml file (default: same directory as binary)")
+	flag.Parse()
 
-	configPath := filepath.Join(filepath.Dir(ex), "config.yaml")
+	// Determine config path and whether auto-creation is allowed
+	var configPath string
+	customConfig := *configFlag != ""
+	if customConfig {
+		// Use the user-specified path
+		absPath, err := filepath.Abs(*configFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid config path: %v\n", err)
+			os.Exit(1)
+		}
+		configPath = absPath
+	} else {
+		// Default: config.yaml in binary directory
+		ex, err := os.Executable()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to determine executable path: %v\n", err)
+			os.Exit(1)
+		}
+		configPath = filepath.Join(filepath.Dir(ex), "config.yaml")
+	}
 
 	// Initialize screen
 	screen, err := ui.NewScreen()
@@ -43,6 +60,14 @@ func main() {
 	// Check terminal size and show resize loop if needed
 	ensureTerminalSize(screen, eventChan)
 
+	// If a custom config path was specified, verify it exists before proceeding
+	if customConfig {
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			showMessageDialog(screen, eventChan, "Error", fmt.Sprintf("The specified configuration file was not found:\n%s", configPath))
+			os.Exit(1)
+		}
+	}
+
 	// Load configuration
 	var cfg *config.Config
 	wasCreated := false
@@ -53,7 +78,7 @@ func main() {
 			wasCreated = created
 			break
 		}
-		handleConfigError(screen, eventChan, configPath, loadErr)
+		handleConfigError(screen, eventChan, configPath, loadErr, customConfig)
 		// If handleConfigError didn't exit, assume we should retry
 		wasCreated = false // Error recovery means not a fresh creation
 	}
@@ -172,7 +197,9 @@ func checkTerminalSize(screen *ui.Screen) error {
 }
 
 // handleConfigError shows a dialog for config errors
-func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPath string, err error) {
+// When customConfig is true (user specified -config), the "Use Default" option is hidden
+// to prevent overwriting an unrelated config.yaml.
+func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPath string, err error, customConfig bool) {
 	w, h := screen.Size()
 
 	// Ensure screen is large enough
@@ -212,8 +239,13 @@ func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPa
 			}
 		}
 
-		// Draw buttons
-		buttons := []string{"Retry", "Use Default", "Exit"}
+		// Draw buttons (hide "Use Default" for custom config paths)
+		var buttons []string
+		if customConfig {
+			buttons = []string{"Retry", "Exit"}
+		} else {
+			buttons = []string{"Retry", "Use Default", "Exit"}
+		}
 		buttonSpacing := (dialogWidth - 4) / len(buttons)
 
 		for i, btn := range buttons {
@@ -241,17 +273,18 @@ func handleConfigError(screen *ui.Screen, eventChan <-chan tcell.Event, configPa
 			case tcell.KeyRight:
 				selectedBtn = (selectedBtn + 1) % len(buttons)
 			case tcell.KeyEnter:
-				switch selectedBtn {
-				case 0: // Retry
+				selectedLabel := buttons[selectedBtn]
+				switch selectedLabel {
+				case "Retry":
 					return
-				case 1: // Use Default
+				case "Use Default":
 					if err := config.WriteDefaultWithBackup(configPath); err != nil {
 						showErrorDialog(screen, eventChan, "Backup Exists", "A backup already exists. Remove config.yaml.bak or rename it, then try again.")
 						break
 					}
 					showMessageDialog(screen, eventChan, "Config Updated", "Default config written. Backup saved as config.yaml.bak.")
 					return
-				case 2: // Exit
+				case "Exit":
 					os.Exit(0)
 				}
 			case tcell.KeyEscape:
