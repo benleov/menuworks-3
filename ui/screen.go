@@ -23,6 +23,9 @@ func NewScreen() (*Screen, error) {
 		return nil, err
 	}
 
+	// Enable mouse button events so tcell handles mouse instead of the terminal
+	s.EnableMouse(tcell.MouseButtonEvents)
+
 	// Set color palette
 	s.SetStyle(defaultStyle())
 
