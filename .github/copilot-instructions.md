@@ -1,6 +1,7 @@
 # Copilot Instructions — Retro MenuWorks‑Style TUI (Go)
 
 - **important** Be concise, use context wisely.
+- **important** See [WORKFLOW.md](WORKFLOW.md) for the complete step-by-step agent workflow covering feature development, testing, PR creation, and release.
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
@@ -444,46 +445,9 @@ The embedded default config in `/assets/` should contain:
 
 ## Git Workflow — Feature Branches
 
-**→ See [FEATURE_WORKFLOW.md](FEATURE_WORKFLOW.md) for a complete step-by-step guide to feature development, testing, PR creation, and release.**
+**→ See [WORKFLOW.md](WORKFLOW.md) for the complete step-by-step agent workflow covering feature development, testing, PR creation, and release.**
 
-The project uses a feature-branch workflow with agent-managed releases:
-
-### Branch Naming
-Feature branches follow the pattern: `feature/<feature-name>`
-- Example: `feature/f2-help-dialog`, `feature/themes`, `feature/mouse-support`
-
-### Workflow Steps
-1. **Create feature branch from main:**
-   ```
-   git checkout main
-   git pull
-   git checkout -b feature/<feature-name>
-   ```
-
-2. **Develop and commit on the feature branch:**
-   - Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`)
-   - Build and test regularly (`.\build.ps1`, `.\test.ps1`)
-   - Ensure all tests pass before considering the feature complete
-   - **Do NOT update VERSION file manually** (agent handles this)
-
-3. **Complete and test the feature:**
-   - All config and menu tests pass (`.\test.ps1`)
-   - Binary builds without errors (`.\build.ps1 -Target windows -Version (Get-Content VERSION)`)
-   - Manual testing on Windows confirms feature works as intended
-   - Documentation (copilot-instructions.md, comments) is up to date
-
-4. **Agent manages merge and release:**
-   - Agent determines version bump from conventional commits
-   - Agent squash-merges feature branch to main
-   - Agent creates git tag and pushes
-   - GitHub Actions builds and publishes release
-   - Agent syncs VERSION file
-
-### Release Workflow
-- Features are merged to `main` only when fully tested (agent validates)
-- `main` always represents a stable, buildable state
-- Version numbers determined automatically from commit types (feat/fix/BREAKING CHANGE)
-- Git tags are the authoritative version source
+The project uses a feature-branch workflow (`feature/<feature-name>`) with agent-managed releases. Conventional commits are required. Git tags are the authoritative version source. The agent must never push directly to `main` or edit the VERSION file manually.
 
 ## Non‑Goals
 - No mouse support.
