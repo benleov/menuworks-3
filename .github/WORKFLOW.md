@@ -82,6 +82,8 @@ Do **NOT** update the VERSION file.
 
 ### 6. Run tests
 
+**Skip this step** if no `.go` files were changed (`git diff main --name-only | Select-String '\.go$'` returns nothing). Docs-only changes do not need testing.
+
 ```powershell
 .\test.ps1
 ```
@@ -90,6 +92,8 @@ Do **NOT** update the VERSION file.
 **STOP** if any test fails. Fix and re-run before continuing.
 
 ### 7. Build binary
+
+**Skip this step** if no `.go` files were changed.
 
 ```powershell
 .\build.ps1 -Target windows -Version <new-version>
@@ -101,6 +105,8 @@ Use the version determined in Step 2. For no-release changes, use the current ve
 **STOP** if build fails. Fix and re-run.
 
 ### 8. Request manual testing
+
+**Skip this step** if no `.go` files were changed.
 
 Provide the user with exact testing instructions:
 
@@ -127,21 +133,24 @@ If any changes were made after manual testing (e.g. fixes from user feedback), c
 git push origin feature/<feature-name>
 ```
 
-Present the user with a PR summary in a code fence:
+Present the user with a filled-in PR description using the project's PR template (`.github/PULL_REQUEST_TEMPLATE.md`):
 
 ````
 ```
-Title: <conventional commit style title>
-Version: <current> → <new>
-Type: feat|fix|breaking
+## Description
+<concise summary of what this PR changes>
 
-## Changes
-- <change 1>
-- <change 2>
+## Type of Change
+- [x] <check the applicable type: Bug fix / New feature / Enhancement / Documentation update>
 
 ## Testing
-- Automated: all tests pass
-- Manual: user verified on Windows
+- [x] All tests pass (or "Skipped — docs-only change")
+- [x] Builds successfully (or "Skipped — docs-only change")
+- [x] Manually tested (or "Skipped — docs-only change")
+- [x] Documentation updated (if needed)
+
+## Related Changes
+<list files/areas affected>
 ```
 ````
 
@@ -151,7 +160,7 @@ Provide the PR creation link:
 https://github.com/benleov/menuworks-3/pull/new/feature/<feature-name>
 ```
 
-Inform the user: **Merging this PR will trigger the release pipeline.**
+Inform the user: **Merging this PR will trigger the release pipeline** (or "no release" for docs-only changes).
 
 Ask the user to confirm the PR has been created before proceeding.
 
@@ -181,8 +190,10 @@ GitHub Actions will automatically:
 Clean up:
 
 ```powershell
-git branch -d feature/<feature-name>
-git push origin --delete feature/<feature-name>
+# Use -D (force) because squash-merge means git won't recognise the branch as merged
+git branch -D feature/<feature-name>
+# Remote branch may already be deleted by GitHub — ignore errors
+git push origin --delete feature/<feature-name> 2>$null
 ```
 
 Ask the user to verify the release is published at:
