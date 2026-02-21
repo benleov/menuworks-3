@@ -362,7 +362,8 @@ Press **R** in any menu to reload your config **and apply the new theme** immedi
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-config <path>` | Path to config.yaml file | Same directory as binary || `-menu <name>` | Initial menu to display on startup | Root menu |
+| `-config <path>` | Path to config.yaml file | Same directory as binary |
+| `-menu <name>` | Initial menu to display on startup | Root menu |
 | `-no-splash` | Skip the splash screen | Show splash |
 
 All flags can also be set in `config.yaml` (see `initial_menu` and `splash_screen`). CLI flags override config values.

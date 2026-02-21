@@ -338,6 +338,10 @@ func (n *Navigator) Open() error {
 // Returns true if the menu exists, false otherwise (silently ignored).
 func (n *Navigator) NavigateToMenu(name string) bool {
 	if name == "" || name == "root" {
+		n.menuPath = []string{"root"}
+		if _, exists := n.selectionIndex["root"]; !exists {
+			n.selectionIndex["root"] = n.firstSelectableIndex("root")
+		}
 		return true
 	}
 	if n.cfg.Menus == nil {
