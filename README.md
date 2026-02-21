@@ -10,6 +10,8 @@ MenuWorks 3.X is an independent modern implementation inspired by the original M
 
 This project is created for educational and preservation purposes as homage to a classic DOS utility.
 
+If you're interested in research into the binary format of the original MenuWorks application, check out [this](https://benleov.github.io/menuworks/) page.
+
 ## Screenshots
 
 ### Retro theme
