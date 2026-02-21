@@ -6,7 +6,8 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/template"
+
+	"gopkg.in/yaml.v3"
 )
 
 // writerOS is the OS identifier to use for exec commands in generated YAML.
@@ -25,67 +26,46 @@ func detectOS() string {
 	}
 }
 
-// configTemplate is the Go template for generating config.yaml
-const configTemplate = `title: "MenuWorks 3.X"
-theme: "dark"
-themes:
-  dark:
-    background: "blue"
-    text: "silver"
-    border: "aqua"
-    highlight_bg: "navy"
-    highlight_fg: "white"
-    hotkey: "yellow"
-    shadow: "gray"
-    disabled: "gray"
-
-items:
-{{- range .Categories }}
-  - type: submenu
-    label: "{{ .Name }}"
-    target: "{{ .ID }}"
-{{- end }}
-  - type: separator
-  - type: back
-    label: "Quit"
-
-menus:
-{{- range .Categories }}
-  {{ .ID }}:
-    title: "{{ .Name }}"
-    items:
-{{- range .Apps }}
-      - type: command
-        label: "{{ .Label }}"
-        exec:
-          {{ .OSKey }}: "{{ .Exec }}"
-{{- end }}
-      - type: back
-        label: "Back"
-{{ end -}}
-`
-
-// categoryData holds template data for a single category.
-type categoryData struct {
-	Name string
-	ID   string
-	Apps []appData
+// yamlConfig mirrors the MenuWorks config structure for marshalling.
+// This is intentionally separate from config.Config to maintain package isolation.
+type yamlConfig struct {
+	Title  string                  `yaml:"title"`
+	Theme  string                  `yaml:"theme"`
+	Themes map[string]yamlTheme    `yaml:"themes"`
+	Items  []yamlItem              `yaml:"items"`
+	Menus  yaml.Node               `yaml:"menus"` // use Node to preserve key order
 }
 
-// appData holds template data for a single application.
-type appData struct {
-	Label string
-	OSKey string
-	Exec  string
+type yamlTheme struct {
+	Background  string `yaml:"background"`
+	Text        string `yaml:"text"`
+	Border      string `yaml:"border"`
+	HighlightBg string `yaml:"highlight_bg"`
+	HighlightFg string `yaml:"highlight_fg"`
+	Hotkey      string `yaml:"hotkey"`
+	Shadow      string `yaml:"shadow"`
+	Disabled    string `yaml:"disabled"`
 }
 
-// templateData holds the full template context.
-type templateData struct {
-	Categories []categoryData
+type yamlItem struct {
+	Type   string    `yaml:"type"`
+	Label  string    `yaml:"label,omitempty"`
+	Target string    `yaml:"target,omitempty"`
+	Exec   *yamlExec `yaml:"exec,omitempty"`
+}
+
+type yamlExec struct {
+	Windows string `yaml:"windows,omitempty"`
+	Linux   string `yaml:"linux,omitempty"`
+	Mac     string `yaml:"mac,omitempty"`
+}
+
+type yamlMenu struct {
+	Title string     `yaml:"title"`
+	Items []yamlItem `yaml:"items"`
 }
 
 // WriteConfig generates a MenuWorks config.yaml from discovered apps and writes it to the given path.
-// If the file already exists, it returns an error (use WriteConfigMerge for merge behavior).
 func WriteConfig(apps []DiscoveredApp, outputPath string) error {
 	f, err := os.Create(outputPath)
 	if err != nil {
@@ -101,22 +81,21 @@ func WriteConfigStdout(apps []DiscoveredApp) error {
 }
 
 // RenderConfig generates the config YAML from apps and writes to w.
+// Uses yaml.Marshal to ensure correct escaping of all values.
 func RenderConfig(apps []DiscoveredApp, w io.Writer) error {
-	data := buildTemplateData(apps)
+	cfg := buildYAMLConfig(apps)
 
-	tmpl, err := template.New("config").Parse(configTemplate)
+	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to parse template: %w", err)
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := tmpl.Execute(w, data); err != nil {
-		return fmt.Errorf("failed to execute template: %w", err)
-	}
-	return nil
+	_, err = w.Write(data)
+	return err
 }
 
-// buildTemplateData transforms discovered apps into template-ready data.
-func buildTemplateData(apps []DiscoveredApp) templateData {
+// buildYAMLConfig transforms discovered apps into a marshallable config struct.
+func buildYAMLConfig(apps []DiscoveredApp) yamlConfig {
 	groups := GroupByCategory(apps)
 
 	// Sort category names for deterministic output
@@ -128,28 +107,75 @@ func buildTemplateData(apps []DiscoveredApp) templateData {
 
 	osKey := writerOS
 
-	var categories []categoryData
+	// Build root menu items (submenu entries + separator + quit)
+	var rootItems []yamlItem
 	for _, name := range catNames {
-		catApps := groups[name]
-		id := sanitizeID(name)
-
-		var items []appData
-		for _, a := range catApps {
-			items = append(items, appData{
-				Label: escapeYAMLString(a.Name),
-				OSKey: osKey,
-				Exec:  escapeYAMLString(a.Exec),
-			})
-		}
-
-		categories = append(categories, categoryData{
-			Name: name,
-			ID:   id,
-			Apps: items,
+		rootItems = append(rootItems, yamlItem{
+			Type:   "submenu",
+			Label:  name,
+			Target: sanitizeID(name),
 		})
 	}
+	rootItems = append(rootItems, yamlItem{Type: "separator"})
+	rootItems = append(rootItems, yamlItem{Type: "back", Label: "Quit"})
 
-	return templateData{Categories: categories}
+	// Build menus as an ordered yaml.Node to preserve category order
+	menusNode := yaml.Node{Kind: yaml.MappingNode}
+	for _, name := range catNames {
+		catApps := groups[name]
+		var menuItems []yamlItem
+		for _, a := range catApps {
+			item := yamlItem{
+				Type:  "command",
+				Label: a.Name,
+				Exec:  &yamlExec{},
+			}
+			switch osKey {
+			case "windows":
+				item.Exec.Windows = a.Exec
+			case "linux":
+				item.Exec.Linux = a.Exec
+			case "mac":
+				item.Exec.Mac = a.Exec
+			}
+			menuItems = append(menuItems, item)
+		}
+		menuItems = append(menuItems, yamlItem{Type: "back", Label: "Back"})
+
+		menu := yamlMenu{
+			Title: name,
+			Items: menuItems,
+		}
+
+		// Marshal the menu value to a node
+		var menuNode yaml.Node
+		if err := menuNode.Encode(menu); err != nil {
+			continue
+		}
+
+		// Add key and value nodes
+		keyNode := yaml.Node{Kind: yaml.ScalarNode, Value: sanitizeID(name)}
+		menusNode.Content = append(menusNode.Content, &keyNode, &menuNode)
+	}
+
+	return yamlConfig{
+		Title: "MenuWorks 3.X",
+		Theme: "dark",
+		Themes: map[string]yamlTheme{
+			"dark": {
+				Background:  "blue",
+				Text:        "silver",
+				Border:      "aqua",
+				HighlightBg: "navy",
+				HighlightFg: "white",
+				Hotkey:      "yellow",
+				Shadow:      "gray",
+				Disabled:    "gray",
+			},
+		},
+		Items: rootItems,
+		Menus: menusNode,
+	}
 }
 
 // sanitizeID converts a display name to a YAML-safe menu ID.
@@ -167,12 +193,5 @@ func sanitizeID(name string) string {
 		s = strings.ReplaceAll(s, "__", "_")
 	}
 	s = strings.Trim(s, "_")
-	return s
-}
-
-// escapeYAMLString escapes characters that need escaping within a YAML double-quoted string.
-func escapeYAMLString(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
 	return s
 }

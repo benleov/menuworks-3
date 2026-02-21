@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // --- Mock Source for testing ---
@@ -350,6 +352,33 @@ func TestDeduplicateAppsEmpty(t *testing.T) {
 	}
 }
 
+func TestDeduplicateAppsByName(t *testing.T) {
+	apps := []DiscoveredApp{
+		{Name: "Firefox", Exec: `C:\ProgramData\Start\Firefox.lnk`, Category: "Applications"},
+		{Name: "Firefox", Exec: `C:\Program Files\Mozilla Firefox\firefox.exe`, Category: "Applications"},
+	}
+
+	deduped := DeduplicateApps(apps)
+	if len(deduped) != 1 {
+		t.Fatalf("expected 1 app after name dedup, got %d", len(deduped))
+	}
+	if deduped[0].Exec != `C:\ProgramData\Start\Firefox.lnk` {
+		t.Error("expected first occurrence to be kept")
+	}
+}
+
+func TestDeduplicateAppsSameNameDifferentCategory(t *testing.T) {
+	apps := []DiscoveredApp{
+		{Name: "Thing", Exec: "thing1.exe", Category: "Apps"},
+		{Name: "Thing", Exec: "thing2.exe", Category: "Games"},
+	}
+
+	deduped := DeduplicateApps(apps)
+	if len(deduped) != 2 {
+		t.Fatalf("same name in different categories should both survive, got %d", len(deduped))
+	}
+}
+
 // --- Writer Tests ---
 
 func TestRenderConfigBasic(t *testing.T) {
@@ -359,7 +388,7 @@ func TestRenderConfigBasic(t *testing.T) {
 	defer func() { writerOS = origOS }()
 
 	apps := []DiscoveredApp{
-		{Name: "Notepad++", Exec: `start "" "C:\Program Files\Notepad++\notepad++.exe"`, Category: "Applications"},
+		{Name: "Notepad++", Exec: `C:\Program Files\Notepad++\notepad++.exe`, Category: "Applications"},
 		{Name: "Half-Life 2", Exec: "start steam://rungameid/220", Category: "Games"},
 	}
 
@@ -371,33 +400,39 @@ func TestRenderConfigBasic(t *testing.T) {
 
 	output := buf.String()
 
-	// Verify structure
-	if !strings.Contains(output, `title: "MenuWorks 3.X"`) {
+	// Verify structure (yaml.Marshal may or may not quote values)
+	if !strings.Contains(output, "MenuWorks 3.X") {
 		t.Error("missing title")
 	}
-	if !strings.Contains(output, `theme: "dark"`) {
+	if !strings.Contains(output, "theme:") {
 		t.Error("missing theme")
 	}
-	if !strings.Contains(output, `target: "applications"`) {
+	if !strings.Contains(output, "applications") {
 		t.Error("missing applications submenu")
 	}
-	if !strings.Contains(output, `target: "games"`) {
+	if !strings.Contains(output, "games") {
 		t.Error("missing games submenu")
 	}
-	if !strings.Contains(output, `label: "Notepad++"`) {
+	if !strings.Contains(output, "Notepad++") {
 		t.Error("missing Notepad++ label")
 	}
-	if !strings.Contains(output, `label: "Half-Life 2"`) {
+	if !strings.Contains(output, "Half-Life 2") {
 		t.Error("missing Half-Life 2 label")
 	}
-	if !strings.Contains(output, `windows:`) {
+	if !strings.Contains(output, "windows:") {
 		t.Error("missing windows exec key")
 	}
-	if !strings.Contains(output, `label: "Quit"`) {
+	if !strings.Contains(output, "Quit") {
 		t.Error("missing Quit item")
 	}
-	if !strings.Contains(output, `label: "Back"`) {
+	if !strings.Contains(output, "Back") {
 		t.Error("missing Back item")
+	}
+
+	// Verify the generated YAML is valid by parsing it back
+	var parsed map[string]interface{}
+	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("generated YAML is invalid: %v", err)
 	}
 }
 
@@ -421,8 +456,8 @@ func TestRenderConfigMultipleCategories(t *testing.T) {
 	output := buf.String()
 
 	// Applications should come before Games (alphabetical)
-	appIdx := strings.Index(output, `"Applications"`)
-	gameIdx := strings.Index(output, `"Games"`)
+	appIdx := strings.Index(output, "Applications")
+	gameIdx := strings.Index(output, "Games")
 	if appIdx < 0 || gameIdx < 0 {
 		t.Fatal("missing category references")
 	}
@@ -439,10 +474,10 @@ func TestRenderConfigEmpty(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, `title: "MenuWorks 3.X"`) {
+	if !strings.Contains(output, "MenuWorks 3.X") {
 		t.Error("empty config should still have a title")
 	}
-	if !strings.Contains(output, `label: "Quit"`) {
+	if !strings.Contains(output, "Quit") {
 		t.Error("empty config should still have Quit")
 	}
 }
@@ -453,7 +488,7 @@ func TestRenderConfigEscaping(t *testing.T) {
 	defer func() { writerOS = origOS }()
 
 	apps := []DiscoveredApp{
-		{Name: `App "with" quotes`, Exec: `start "" "C:\path\to\app.exe"`, Category: "Test"},
+		{Name: `App "with" quotes`, Exec: `C:\path\to\app.exe`, Category: "Test"},
 	}
 
 	var buf bytes.Buffer
@@ -462,10 +497,20 @@ func TestRenderConfigEscaping(t *testing.T) {
 		t.Fatalf("RenderConfig failed: %v", err)
 	}
 
+	// Verify the generated YAML round-trips correctly
+	var parsed map[string]interface{}
+	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("generated YAML with special chars is invalid: %v", err)
+	}
+
 	output := buf.String()
-	// Quotes and backslashes should be escaped
-	if !strings.Contains(output, `App \"with\" quotes`) {
-		t.Errorf("expected escaped quotes in output, got: %s", output)
+	// The label with quotes should appear in some escaped form
+	if !strings.Contains(output, "with") || !strings.Contains(output, "quotes") {
+		t.Errorf("expected label content in output, got: %s", output)
+	}
+	// The exec path should appear
+	if !strings.Contains(output, `path`) || !strings.Contains(output, `app.exe`) {
+		t.Errorf("expected exec path in output, got: %s", output)
 	}
 }
 
@@ -493,28 +538,6 @@ func TestSanitizeID(t *testing.T) {
 	}
 }
 
-// --- escapeYAMLString Tests ---
-
-func TestEscapeYAMLString(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{`simple`, `simple`},
-		{`with "quotes"`, `with \"quotes\"`},
-		{`back\slash`, `back\\slash`},
-		{`C:\Program Files\app.exe`, `C:\\Program Files\\app.exe`},
-		{`"quoted" and \slashed\`, `\"quoted\" and \\slashed\\`},
-	}
-
-	for _, tc := range tests {
-		got := escapeYAMLString(tc.input)
-		if got != tc.expected {
-			t.Errorf("escapeYAMLString(%q) = %q, expected %q", tc.input, got, tc.expected)
-		}
-	}
-}
-
 // --- Integration Test: End-to-End ---
 
 func TestEndToEndDiscoverAndRender(t *testing.T) {
@@ -537,8 +560,8 @@ func TestEndToEndDiscoverAndRender(t *testing.T) {
 		category:  "Applications",
 		available: true,
 		apps: []DiscoveredApp{
-			{Name: "Notepad++", Exec: `start "" "C:\notepad++.exe"`, Source: "startmenu", Category: "Applications"},
-			{Name: "Firefox", Exec: `start "" "C:\firefox.exe"`, Source: "startmenu", Category: "Applications"},
+			{Name: "Notepad++", Exec: `C:\notepad++.exe`, Source: "startmenu", Category: "Applications"},
+			{Name: "Firefox", Exec: `C:\firefox.exe`, Source: "startmenu", Category: "Applications"},
 		},
 	})
 
@@ -564,19 +587,19 @@ func TestEndToEndDiscoverAndRender(t *testing.T) {
 
 	// Verify the generated YAML has proper structure
 	expectedStrings := []string{
-		`title: "MenuWorks 3.X"`,
-		`target: "applications"`,
-		`target: "games"`,
-		`label: "Firefox"`,
-		`label: "Notepad++"`,
-		`label: "Half-Life 2"`,
-		`label: "Portal 2"`,
-		`label: "Quit"`,
-		`label: "Back"`,
-		`type: submenu`,
-		`type: command`,
-		`type: separator`,
-		`type: back`,
+		"MenuWorks 3.X",
+		"applications",
+		"games",
+		"Firefox",
+		"Notepad++",
+		"Half-Life 2",
+		"Portal 2",
+		"Quit",
+		"Back",
+		"submenu",
+		"command",
+		"separator",
+		"type: back",
 	}
 	for _, s := range expectedStrings {
 		if !strings.Contains(output, s) {

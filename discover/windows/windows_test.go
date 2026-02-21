@@ -230,7 +230,7 @@ func TestIsFilteredExecutable(t *testing.T) {
 	}
 }
 
-func TestFindExecutables(t *testing.T) {
+func TestFindMainExecutable(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
@@ -250,22 +250,38 @@ func TestFindExecutables(t *testing.T) {
 	os.MkdirAll(subDir, 0755)
 	os.WriteFile(filepath.Join(subDir, "nested.exe"), []byte{}, 0644)
 
-	exes := findExecutables(tmpDir)
+	// Returns single best exe (first non-filtered alphabetically as fallback)
+	exe := findMainExecutable(tmpDir, "testdir")
+	if exe == "" {
+		t.Fatal("expected an executable to be found")
+	}
+	base := filepath.Base(exe)
+	// mainprogram.exe comes before myapp.exe alphabetically
+	if base != "mainprogram.exe" {
+		t.Errorf("expected mainprogram.exe as fallback, got %s", base)
+	}
+}
 
-	// Should find myapp.exe and mainprogram.exe only
-	if len(exes) != 2 {
-		t.Fatalf("expected 2 executables, got %d: %v", len(exes), exes)
-	}
+func TestFindMainExecutablePrefersDirNameMatch(t *testing.T) {
+	tmpDir := t.TempDir()
 
-	names := make(map[string]bool)
-	for _, exe := range exes {
-		names[filepath.Base(exe)] = true
+	os.WriteFile(filepath.Join(tmpDir, "other.exe"), []byte{}, 0644)
+	os.WriteFile(filepath.Join(tmpDir, "myapp.exe"), []byte{}, 0644)
+
+	exe := findMainExecutable(tmpDir, "MyApp")
+	if exe == "" {
+		t.Fatal("expected an executable to be found")
 	}
-	if !names["myapp.exe"] {
-		t.Error("expected myapp.exe to be found")
+	if filepath.Base(exe) != "myapp.exe" {
+		t.Errorf("expected myapp.exe (matches dir name), got %s", filepath.Base(exe))
 	}
-	if !names["mainprogram.exe"] {
-		t.Error("expected mainprogram.exe to be found")
+}
+
+func TestFindMainExecutableEmpty(t *testing.T) {
+	tmpDir := t.TempDir()
+	exe := findMainExecutable(tmpDir, "empty")
+	if exe != "" {
+		t.Errorf("expected empty result for empty dir, got %s", exe)
 	}
 }
 

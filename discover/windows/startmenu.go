@@ -3,7 +3,6 @@
 package windows
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,10 +65,9 @@ func (s *StartMenuSource) Discover() ([]discover.DiscoveredApp, error) {
 			}
 			seen[key] = true
 
-			exec := fmt.Sprintf("start \"\" \"%s\"", target)
 			apps = append(apps, discover.DiscoveredApp{
 				Name:     name,
-				Exec:     exec,
+				Exec:     target,
 				Source:   "startmenu",
 				Category: "Applications",
 			})

@@ -164,16 +164,24 @@ func GroupByCategory(apps []DiscoveredApp) map[string][]DiscoveredApp {
 	return groups
 }
 
-// DeduplicateApps removes duplicate apps (same Exec command), keeping the first occurrence.
+// DeduplicateApps removes duplicate apps, keeping the first occurrence.
+// Deduplicates by exec command (case-insensitive) and by normalized name within the same category.
 func DeduplicateApps(apps []DiscoveredApp) []DiscoveredApp {
-	seen := make(map[string]bool)
+	seenExec := make(map[string]bool)
+	seenName := make(map[string]bool) // key = "category|normalizedName"
 	var out []DiscoveredApp
 	for _, a := range apps {
-		key := strings.ToLower(a.Exec)
-		if !seen[key] {
-			seen[key] = true
-			out = append(out, a)
+		execKey := strings.ToLower(a.Exec)
+		if seenExec[execKey] {
+			continue
 		}
+		nameKey := strings.ToLower(a.Category) + "|" + strings.ToLower(a.Name)
+		if seenName[nameKey] {
+			continue
+		}
+		seenExec[execKey] = true
+		seenName[nameKey] = true
+		out = append(out, a)
 	}
 	return out
 }

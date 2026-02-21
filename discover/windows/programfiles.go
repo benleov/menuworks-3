@@ -3,7 +3,6 @@
 package windows
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,25 +41,25 @@ func (s *ProgramFilesSource) Discover() ([]discover.DiscoveredApp, error) {
 			}
 
 			subDir := filepath.Join(baseDir, entry.Name())
-			exes := findExecutables(subDir)
-
-			for _, exe := range exes {
-				key := strings.ToLower(exe)
-				if seen[key] {
-					continue
-				}
-				seen[key] = true
-
-				name := cleanAppName(entry.Name(), filepath.Base(exe))
-				exec := fmt.Sprintf("start \"\" \"%s\"", exe)
-
-				apps = append(apps, discover.DiscoveredApp{
-					Name:     name,
-					Exec:     exec,
-					Source:   "programfiles",
-					Category: "Applications",
-				})
+			exe := findMainExecutable(subDir, entry.Name())
+			if exe == "" {
+				continue
 			}
+
+			key := strings.ToLower(exe)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+
+			name := cleanAppName(entry.Name(), filepath.Base(exe))
+
+			apps = append(apps, discover.DiscoveredApp{
+				Name:     name,
+				Exec:     exe,
+				Source:   "programfiles",
+				Category: "Applications",
+			})
 		}
 	}
 
@@ -79,14 +78,16 @@ func programFilesDirs() []string {
 	return dirs
 }
 
-// findExecutables finds .exe files in a directory (one level deep only).
-func findExecutables(dir string) []string {
-	var exes []string
-
+// findMainExecutable finds the single best .exe in a directory.
+// Prefers an exe whose name matches the directory name; otherwise picks the first non-filtered one.
+func findMainExecutable(dir string, dirName string) string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return exes
+		return ""
 	}
+
+	normDir := strings.ToLower(strings.ReplaceAll(dirName, " ", ""))
+	var fallback string
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -99,10 +100,20 @@ func findExecutables(dir string) []string {
 		if isFilteredExecutable(name) {
 			continue
 		}
-		exes = append(exes, filepath.Join(dir, name))
+
+		// Prefer exe whose base name (without .exe) matches the directory name
+		normExe := strings.ToLower(strings.ReplaceAll(strings.TrimSuffix(name, filepath.Ext(name)), " ", ""))
+		if normExe == normDir {
+			return filepath.Join(dir, name)
+		}
+
+		// Keep first valid exe as fallback
+		if fallback == "" {
+			fallback = filepath.Join(dir, name)
+		}
 	}
 
-	return exes
+	return fallback
 }
 
 // isFilteredExecutable returns true if the exe name suggests it should be excluded.
