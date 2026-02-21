@@ -502,3 +502,95 @@ func TestScrollOffsetPerMenu(t *testing.T) {
 		t.Fatalf("expected root scroll offset %d preserved, got %d", rootOffset, nav.GetScrollOffset())
 	}
 }
+
+func TestDuplicateExplicitHotkeys(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "Alpha", Hotkey: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Also A", Hotkey: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Third A", Hotkey: "A", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// First item with hotkey "A" should win
+	if got := nav.SelectItemByHotkey("A"); got != 0 {
+		t.Fatalf("expected hotkey A to select first item (index 0), got %d", got)
+	}
+}
+
+func TestPageDownBasic(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{Title: "Root", Items: items}
+	nav := NewNavigator(cfg)
+
+	// Start at 0, page down by 5
+	nav.PageDown(5)
+	if nav.GetSelectionIndex() != 5 {
+		t.Fatalf("expected selection at 5 after PageDown(5), got %d", nav.GetSelectionIndex())
+	}
+
+	// Page down again
+	nav.PageDown(5)
+	if nav.GetSelectionIndex() != 10 {
+		t.Fatalf("expected selection at 10, got %d", nav.GetSelectionIndex())
+	}
+
+	// Page down past the end — should clamp to last item
+	nav.PageDown(100)
+	if nav.GetSelectionIndex() != 19 {
+		t.Fatalf("expected selection at 19 (last), got %d", nav.GetSelectionIndex())
+	}
+}
+
+func TestPageUpBasic(t *testing.T) {
+	items := make([]config.MenuItem, 20)
+	for i := range items {
+		items[i] = config.MenuItem{Type: "command", Label: fmt.Sprintf("Item %d", i), Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}}
+	}
+
+	cfg := &config.Config{Title: "Root", Items: items}
+	nav := NewNavigator(cfg)
+
+	// Move to item 15 first
+	nav.SetSelectionIndex(15)
+
+	// Page up by 5
+	nav.PageUp(5)
+	if nav.GetSelectionIndex() != 10 {
+		t.Fatalf("expected selection at 10 after PageUp(5), got %d", nav.GetSelectionIndex())
+	}
+
+	// Page up past the beginning — should clamp to first item
+	nav.PageUp(100)
+	if nav.GetSelectionIndex() != 0 {
+		t.Fatalf("expected selection at 0 (first), got %d", nav.GetSelectionIndex())
+	}
+}
+
+func TestPageDownSkipsSeparators(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "command", Label: "Item 0", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Item 1", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "command", Label: "Item 2", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+			{Type: "separator"},
+			{Type: "command", Label: "Item 4", Exec: config.ExecConfig{Windows: "echo", Linux: "echo", Mac: "echo"}},
+		},
+	}
+
+	nav := NewNavigator(cfg)
+
+	// Page down by 3 from index 0 — target is index 3 (separator), should land on index 2
+	nav.PageDown(3)
+	if got := nav.GetSelectionIndex(); got != 2 {
+		t.Fatalf("expected PageDown to skip separator and land on 2, got %d", got)
+	}
+}

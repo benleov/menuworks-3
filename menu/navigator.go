@@ -54,12 +54,14 @@ func (n *Navigator) buildHotkeys(menuName string, items []config.MenuItem) {
 	n.hotkeyMap[menuName] = make(map[string]int)
 	usedHotkeys := make(map[string]bool)
 
-	// First pass: mark explicitly defined hotkeys
+	// First pass: mark explicitly defined hotkeys (first one wins for duplicates)
 	for i, item := range items {
 		if item.Hotkey != "" {
 			hotkey := strings.ToUpper(item.Hotkey)
-			n.hotkeyMap[menuName][hotkey] = i
-			usedHotkeys[hotkey] = true
+			if !usedHotkeys[hotkey] {
+				n.hotkeyMap[menuName][hotkey] = i
+				usedHotkeys[hotkey] = true
+			}
 		}
 	}
 
@@ -333,6 +335,46 @@ func (n *Navigator) PrevSelectable() {
 
 	// Fallback: stay at current
 	n.SetSelectionIndex(currentIdx)
+}
+
+// PageDown moves selection down by pageSize items, skipping separators
+func (n *Navigator) PageDown(pageSize int) {
+	items := n.GetCurrentMenu()
+	currentIdx := n.GetSelectionIndex()
+	targetIdx := currentIdx + pageSize
+
+	// Clamp to last item (no wrapping for page navigation)
+	if targetIdx >= len(items) {
+		targetIdx = len(items) - 1
+	}
+
+	// Find nearest selectable item at or before target
+	for i := targetIdx; i > currentIdx; i-- {
+		if items[i].Type != "separator" {
+			n.SetSelectionIndex(i)
+			return
+		}
+	}
+}
+
+// PageUp moves selection up by pageSize items, skipping separators
+func (n *Navigator) PageUp(pageSize int) {
+	items := n.GetCurrentMenu()
+	currentIdx := n.GetSelectionIndex()
+	targetIdx := currentIdx - pageSize
+
+	// Clamp to first item (no wrapping for page navigation)
+	if targetIdx < 0 {
+		targetIdx = 0
+	}
+
+	// Find nearest selectable item at or after target
+	for i := targetIdx; i < currentIdx; i++ {
+		if items[i].Type != "separator" {
+			n.SetSelectionIndex(i)
+			return
+		}
+	}
 }
 
 // GetSelectedItem returns the currently selected item

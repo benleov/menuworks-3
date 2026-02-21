@@ -456,6 +456,12 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 			case tcell.KeyDown:
 				navigator.NextSelectable()
 
+			case tcell.KeyPgUp:
+				navigator.PageUp(14)
+
+			case tcell.KeyPgDn:
+				navigator.PageDown(14)
+
 			case tcell.KeyRight, tcell.KeyEnter:
 				handleSelection()
 
