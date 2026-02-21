@@ -78,7 +78,7 @@ git checkout -b feature/<feature-name>
 Research the codebase, then present a plan to the user containing:
 1. Files to modify (with specific functions/areas)
 2. Changes to make (concise descriptions)
-3. Test scenarios (automated + manual)
+3. Test scenarios (automated - adding new unit tests to cover new functionality, or updating existing + manual tests for the user to verify)
 
 **STOP** until the user approves the plan.
 
