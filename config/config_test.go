@@ -220,3 +220,54 @@ func TestMouseSupportConfig(t *testing.T) {
 	}
 }
 
+func TestSplashScreenConfig(t *testing.T) {
+	// Test default (omitted) — should be enabled
+	cfg := &Config{}
+	if !cfg.IsSplashEnabled() {
+		t.Errorf("expected splash enabled by default when omitted")
+	}
+
+	// Test explicit true
+	trueVal := true
+	cfg.SplashScreen = &trueVal
+	if !cfg.IsSplashEnabled() {
+		t.Errorf("expected splash enabled when set to true")
+	}
+
+	// Test explicit false
+	falseVal := false
+	cfg.SplashScreen = &falseVal
+	if cfg.IsSplashEnabled() {
+		t.Errorf("expected splash disabled when set to false")
+	}
+}
+
+func TestInitialMenuConfig(t *testing.T) {
+	yamlData := `
+title: "Test"
+initial_menu: "games"
+items:
+  - type: back
+    label: "Quit"
+menus:
+  games:
+    title: "Games"
+    items:
+      - type: back
+        label: "Back"
+`
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	if err := os.WriteFile(path, []byte(yamlData), 0644); err != nil {
+		t.Fatalf("failed to write test config: %v", err)
+	}
+
+	cfg, _, err := Load(path)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+	if cfg.InitialMenu != "games" {
+		t.Errorf("expected initial_menu='games', got '%s'", cfg.InitialMenu)
+	}
+}
+

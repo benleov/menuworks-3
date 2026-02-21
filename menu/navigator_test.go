@@ -286,3 +286,67 @@ func TestNavigationPreservesSelectionAcrossMenus(t *testing.T) {
 		t.Fatalf("expected tools selection remembered at 2, got %d", nav.GetSelectionIndex())
 	}
 }
+
+func TestNavigateToMenu(t *testing.T) {
+	cfg := &config.Config{
+		Title: "Root",
+		Items: []config.MenuItem{
+			{Type: "submenu", Label: "Games", Target: "games"},
+			{Type: "back", Label: "Quit"},
+		},
+		Menus: map[string]config.Menu{
+			"games": {
+				Title: "Games",
+				Items: []config.MenuItem{
+					{Type: "command", Label: "Doom", Exec: config.ExecConfig{Windows: "echo doom"}},
+					{Type: "back", Label: "Back"},
+				},
+			},
+		},
+	}
+
+	// Valid menu — should navigate
+	nav := NewNavigator(cfg)
+	if !nav.NavigateToMenu("games") {
+		t.Fatal("expected NavigateToMenu to return true for existing menu")
+	}
+	if nav.GetCurrentMenuName() != "games" {
+		t.Fatalf("expected current menu 'games', got '%s'", nav.GetCurrentMenuName())
+	}
+	if nav.IsAtRoot() {
+		t.Fatal("expected not at root after NavigateToMenu")
+	}
+
+	// Back should return to root
+	nav.Back()
+	if !nav.IsAtRoot() {
+		t.Fatal("expected at root after Back")
+	}
+
+	// Invalid menu — should return false, stay at root
+	nav2 := NewNavigator(cfg)
+	if nav2.NavigateToMenu("nonexistent") {
+		t.Fatal("expected NavigateToMenu to return false for nonexistent menu")
+	}
+	if !nav2.IsAtRoot() {
+		t.Fatal("expected to stay at root when menu not found")
+	}
+
+	// Empty string — should return true (root)
+	nav3 := NewNavigator(cfg)
+	if !nav3.NavigateToMenu("") {
+		t.Fatal("expected NavigateToMenu to return true for empty string")
+	}
+	if !nav3.IsAtRoot() {
+		t.Fatal("expected to stay at root for empty string")
+	}
+
+	// "root" — should return true
+	nav4 := NewNavigator(cfg)
+	if !nav4.NavigateToMenu("root") {
+		t.Fatal("expected NavigateToMenu to return true for 'root'")
+	}
+	if !nav4.IsAtRoot() {
+		t.Fatal("expected to stay at root for 'root'")
+	}
+}

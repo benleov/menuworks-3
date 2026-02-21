@@ -74,6 +74,8 @@ type Config struct {
 	Theme        string               `yaml:"theme,omitempty"`
 	Themes       map[string]ThemeColors `yaml:"themes,omitempty"`
 	MouseSupport *bool                `yaml:"mouse_support,omitempty"`
+	InitialMenu  string               `yaml:"initial_menu,omitempty"`
+	SplashScreen *bool                `yaml:"splash_screen,omitempty"`
 }
 
 // IsMouseEnabled returns true if mouse support is enabled (default: true when omitted)
@@ -82,6 +84,14 @@ func (c *Config) IsMouseEnabled() bool {
 		return true
 	}
 	return *c.MouseSupport
+}
+
+// IsSplashEnabled returns true if the splash screen should be shown (default: true when omitted)
+func (c *Config) IsSplashEnabled() bool {
+	if c.SplashScreen == nil {
+		return true
+	}
+	return *c.SplashScreen
 }
 
 // Load reads the config file from disk, or writes embedded default if missing

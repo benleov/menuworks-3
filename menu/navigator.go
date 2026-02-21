@@ -334,6 +334,30 @@ func (n *Navigator) Open() error {
 	return nil
 }
 
+// NavigateToMenu sets the initial menu to the given name.
+// Returns true if the menu exists, false otherwise (silently ignored).
+func (n *Navigator) NavigateToMenu(name string) bool {
+	if name == "" || name == "root" {
+		n.menuPath = []string{"root"}
+		if _, exists := n.selectionIndex["root"]; !exists {
+			n.selectionIndex["root"] = n.firstSelectableIndex("root")
+		}
+		return true
+	}
+	if n.cfg.Menus == nil {
+		return false
+	}
+	if _, exists := n.cfg.Menus[name]; !exists {
+		return false
+	}
+	// Push the menu onto the path (root -> name)
+	n.menuPath = []string{"root", name}
+	if _, exists := n.selectionIndex[name]; !exists {
+		n.selectionIndex[name] = n.firstSelectableIndex(name)
+	}
+	return true
+}
+
 // Back returns to parent menu
 func (n *Navigator) Back() {
 	if len(n.menuPath) > 1 {
