@@ -169,11 +169,13 @@ gh pr create --base main --title "<type>: <description>" --body @'
 
 **STOP** if PR creation fails. Inform the user.
 
-Wait for CI checks to pass:
+Wait for CI checks to pass (do not use `--watch` as it uses an alternate screen buffer that prevents output capture):
 
 ```powershell
-gh pr checks --watch
+gh pr checks
 ```
+
+If checks are still pending, wait and re-run `gh pr checks` until they complete.
 
 **STOP** if CI checks fail. Inform the user of the failure details.
 
