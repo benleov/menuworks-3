@@ -450,6 +450,8 @@ The embedded default config in `/assets/` should contain:
 
 ## Git Workflow — Feature Branches
 
+**→ See [FEATURE_WORKFLOW.md](FEATURE_WORKFLOW.md) for a complete step-by-step guide to feature development, testing, PR creation, and release.**
+
 The project uses a feature-branch workflow for organized development:
 
 ### Branch Naming
