@@ -1,5 +1,8 @@
 title: "MenuWorks 3.X"
 
+# Mouse support (true = enabled, false = keyboard-only; default: true if omitted)
+mouse_support: true
+
 # Theme selection (choose from themes defined below)
 theme: "retro"
 

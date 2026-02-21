@@ -68,11 +68,20 @@ type ThemeColors struct {
 
 // Config is the root configuration structure
 type Config struct {
-	Title  string               `yaml:"title"`
-	Items  []MenuItem           `yaml:"items"`
-	Menus  map[string]Menu      `yaml:"menus"`
-	Theme  string               `yaml:"theme,omitempty"`
-	Themes map[string]ThemeColors `yaml:"themes,omitempty"`
+	Title        string               `yaml:"title"`
+	Items        []MenuItem           `yaml:"items"`
+	Menus        map[string]Menu      `yaml:"menus"`
+	Theme        string               `yaml:"theme,omitempty"`
+	Themes       map[string]ThemeColors `yaml:"themes,omitempty"`
+	MouseSupport *bool                `yaml:"mouse_support,omitempty"`
+}
+
+// IsMouseEnabled returns true if mouse support is enabled (default: true when omitted)
+func (c *Config) IsMouseEnabled() bool {
+	if c.MouseSupport == nil {
+		return true
+	}
+	return *c.MouseSupport
 }
 
 // Load reads the config file from disk, or writes embedded default if missing

@@ -58,6 +58,11 @@ func main() {
 		wasCreated = false // Error recovery means not a fresh creation
 	}
 
+	// Enable mouse support if configured (default: enabled)
+	if cfg.IsMouseEnabled() {
+		screen.EnableMouse()
+	}
+
 	// Apply theme from config (if specified)
 	applyThemeFromConfig(screen, cfg)
 
@@ -315,6 +320,9 @@ func showErrorDialog(screen *ui.Screen, eventChan <-chan tcell.Event, title, mes
 
 // mainLoop handles the main event loop
 func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, cfg *config.Config, eventChan <-chan tcell.Event) {
+	// Track previous mouse button state for edge detection (act only on new presses)
+	var lastMouseButtons tcell.ButtonMask
+
 	handleSelection := func() {
 		item, _ := navigator.GetSelectedItem()
 		if item.Type == "submenu" {
@@ -449,20 +457,27 @@ func mainLoop(screen *ui.Screen, configPath string, navigator *menu.Navigator, c
 			continue
 
 		case *tcell.EventMouse:
-			switch e.Buttons() {
-			case tcell.ButtonPrimary:
-				// Left click = Enter/select
+			buttons := e.Buttons()
+			// Edge detection: only act on NEW presses (not held buttons)
+			newPresses := buttons &^ lastMouseButtons
+			// Release detection: buttons that were pressed but now aren't
+			released := lastMouseButtons &^ buttons
+			lastMouseButtons = buttons
+
+			// Check wheel first (transient one-shot events)
+			if newPresses&tcell.WheelUp != 0 {
+				navigator.PrevSelectable()
+			} else if newPresses&tcell.WheelDown != 0 {
+				navigator.NextSelectable()
+			} else if newPresses&tcell.ButtonPrimary != 0 {
+				// Left click = Enter/select (on press)
 				handleSelection()
-			case tcell.ButtonSecondary:
-				// Right click = Back/exit
+			} else if released&tcell.ButtonSecondary != 0 {
+				// Right click = Back/exit (on release, to filter phantom events)
 				if navigator.IsAtRoot() {
 					return
 				}
 				navigator.Back()
-			case tcell.WheelUp:
-				navigator.PrevSelectable()
-			case tcell.WheelDown:
-				navigator.NextSelectable()
 			}
 		}
 	}
