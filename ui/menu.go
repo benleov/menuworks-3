@@ -83,7 +83,7 @@ func (s *Screen) DrawMenu(navigator *menu.Navigator, disabledItems map[string]bo
 
 	// Draw footer with helpful text
 	footerY := startY + menuHeight + 1
-	footerText := "↑↓/Scroll: Navigate | ENTER/Click: Select | ESC/RClick: Back | R: Reload | F2: Help"
+	footerText := "↑↓: Navigate | ENTER: Select | ESC: Back | R: Reload | F2: Help"
 	if footerY < h {
 		s.DrawString(startX, footerY, footerText, StyleNormal())
 	}
