@@ -9,11 +9,90 @@
 - **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
 
 ## Versioning and Release
-- VERSION is the single source of truth for the release version.
-- Update VERSION and CHANGELOG.md together for every release.
-- Build with the VERSION value: `.\build.ps1 -Target windows -Version (Get-Content VERSION)`.
-- Tag releases as `v<VERSION>` and create a GitHub release from that tag.
-- Do not ship a release if VERSION, CHANGELOG.md, and the tag do not match.
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (MAJOR.MINOR.PATCH).
+
+### VERSION as Single Source of Truth
+- **VERSION** file is the authoritative release version number (e.g., `3.0.1`).
+- CHANGELOG.md and git tags (e.g., `v3.0.1`) must always match VERSION.
+- If VERSION, CHANGELOG.md, and git tags disagree, do NOT release; warn the user immediately.
+
+### Git Workflow
+1. **Feature development:** Create `feature/<name>` branch from `main`.
+2. **Merge to main:** After testing and approval, merge feature branch back to `main`.
+3. **Prepare release:** Update VERSION and CHANGELOG.md on main (together, not separately).
+4. **Tag and release:** Create git tag and GitHub release matching the VERSION.
+
+### Pre-Release Validation Checklist
+**Before updating VERSION or creating a release, verify:**
+- [ ] All tests pass: `.\test.ps1`
+- [ ] Binary builds successfully: `.\build.ps1 -Target windows -Version (Get-Content VERSION)`
+- [ ] VERSION file contains the intended release version (e.g., `3.0.1`).
+- [ ] CHANGELOG.md has an entry for the version with a date (e.g., `## [3.0.1] - 2026-02-21`).
+- [ ] CHANGELOG.md entry is placed above the previous release and below `[Unreleased]`.
+- [ ] The `[Unreleased]` section exists and is empty (or contains only planned unreleased work).
+- [ ] No git tag `v<VERSION>` already exists locally or on origin (avoid duplicates).
+
+### Release Steps
+1. **Ensure main is clean:**
+   ```
+   git checkout main
+   git pull origin main
+   git status
+   ```
+   (must show "nothing to commit, working tree clean")
+
+2. **Update VERSION and CHANGELOG.md on main:**
+   - Edit VERSION: set to the release version (e.g., `3.0.1`).
+   - Edit CHANGELOG.md: add `## [3.0.1] - <DATE>` section with fixes/features, above previous release.
+   - Commit together: `git add VERSION CHANGELOG.md && git commit -m "Bump version to 3.0.1"`.
+   - Push: `git push origin main`.
+
+3. **Build and test the release:**
+   ```
+   .\build.ps1 -Target windows -Version (Get-Content VERSION)
+   .\test.ps1
+   ```
+   (both must succeed without errors)
+
+4. **Create git tag:**
+   ```
+   git tag -a v3.0.1 -m "release: version 3.0.1"
+   git push origin v3.0.1
+   ```
+
+5. **Create GitHub release:**
+   - Go to https://github.com/benleov/menuworks-3/releases/new
+   - Select tag `v3.0.1`
+   - Title: "MenuWorks 3.0.1"
+   - Description: copy the CHANGELOG.md entry for [3.0.1]
+   - Mark as latest (if this release should be current)
+   - Publish
+
+### Warning Conditions (Alert User & Stop)
+**Warn the user and do NOT proceed if:**
+- VERSION file is empty or malformed (not a valid semver).
+- CHANGELOG.md has no entry matching the VERSION (missing section).
+- CHANGELOG.md entry is missing a date (e.g., `## [3.0.1]` without date).
+- A git tag `v<VERSION>` already exists on a different commit than current HEAD.
+- `git status` shows uncommitted changes before tagging.
+- Tests fail (`.\test.ps1` exit code != 0).
+- Build fails (`.\build.ps1` exit code != 0).
+- VERSION and CHANGELOG.md entries don't match (e.g., VERSION=3.0.1 but CHANGELOG=[3.0.2]).
+- User tries to update VERSION without simultaneously updating CHANGELOG.md in the same commit.
+
+### Recovery from Release Mistakes
+**If you created a tag prematurely or incorrectly:**
+- Delete local tag: `git tag -d v3.0.1`
+- Delete remote tag: `git push origin :v3.0.1`
+- Fix the issue (update VERSION/CHANGELOG).
+- Re-create tag and push.
+
+**If you pushed a release but need to yank it:**
+- Delete git tag: `git tag -d v3.0.1 && git push origin :v3.0.1`
+- Delete GitHub release (via web UI).
+- Revert VERSION/CHANGELOG if needed: `git revert <commit>` or `git reset`.
+- Document the issue in the new [Unreleased] CHANGELOG entry.
 
 
 ## Project Goal
