@@ -159,7 +159,64 @@ Provide the user with exact commands to manually test the feature:
    - Delete local feature branch
    - Delete remote feature branch
 
+<<<<<<< HEAD
 **User involvement:** None required after approval — agent manages everything
+=======
+Provide this summary to the user and provide the GitHub PR creation link.
+
+---
+
+## Step 11: Create Pull Request
+
+On GitHub:
+
+1. Go to: https://github.com/benleov/menuworks-3/pull/new/feature/<feature-name>
+2. Click **Create pull request**
+3. Fill in:
+   - **Title:** Use the title from Step 10
+   - **Description:** Use the description from Step 10
+4. Click **Create pull request**
+
+---
+
+## Step 12: Merge & Clean Up
+
+**After PR approval on GitHub:**
+
+Use a merge commit to integrate the feature branch into main (do NOT rebase):
+
+```powershell
+# Switch to main
+git checkout main
+
+# Pull latest (should include merged PR)
+git pull origin main
+
+# Verify merge was successful
+git log --oneline -5
+
+# Delete local feature branch
+git branch -d feature/<feature-name>
+
+# Delete remote feature branch
+git push origin --delete feature/<feature-name>
+```
+
+---
+
+## Step 13: Release to GitHub
+
+**On GitHub:**
+
+1. Go to: https://github.com/benleov/menuworks-3/releases
+2. Click **Draft a new release**
+3. Select tag dropdown → choose version tag (e.g., `v3.1.0`)
+   - Or type `v<VERSION>` to create new tag from main
+4. Fill in:
+   - **Release title:** `MenuWorks <VERSION>` (e.g., `MenuWorks 3.1.0`)
+   - **Description:** Copy CHANGELOG.md entry for this version
+5. Click **Publish release**
+>>>>>>> main
 
 ---
 
