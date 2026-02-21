@@ -2,6 +2,11 @@
 
 This document provides a step-by-step process for developing and releasing features in MenuWorks.
 
+## Key Rules
+
+- **Do NOT push to main directly.** Always work from a feature branch (`feature/<feature-name>`).
+- **Do NOT rebase unless explicitly told.** Always use merge commits when integrating branches.
+
 ## Step 1: Prepare Your Repository
 
 Ensure your local repository is up to date and in a clean state:
@@ -178,6 +183,8 @@ On GitHub:
 ## Step 12: Merge & Clean Up
 
 **After PR approval on GitHub:**
+
+Use a merge commit to integrate the feature branch into main (do NOT rebase):
 
 ```powershell
 # Switch to main
