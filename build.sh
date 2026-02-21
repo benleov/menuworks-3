@@ -73,7 +73,7 @@ for output in "${!TARGETS[@]}"; do
     LD_FLAGS="-s -w -X main.version=$VERSION"
     OUTPUT_PATH="dist/$output"
     
-    "$LOCAL_GO" build -trimpath -ldflags "$LD_FLAGS" -o "$OUTPUT_PATH" cmd/menuworks/main.go
+    "$LOCAL_GO" build -trimpath -ldflags "$LD_FLAGS" -o "$OUTPUT_PATH" ./cmd/menuworks
     
     if [ $? -eq 0 ]; then
         SIZE=$(du -h "$OUTPUT_PATH" | cut -f1)

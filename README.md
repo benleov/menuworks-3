@@ -39,6 +39,7 @@ If you're interested in research into the binary format of the original MenuWork
 - **Selection Memory** — Current menu position preserved during session (resets on config reload)
 - **Scrollable Menus** — Menus with more items than fit on screen scroll automatically with ▲/▼ indicators
 - **Graceful Error Handling** — Clear error dialogs for missing config, invalid YAML, and broken menu links
+- **Application Discovery** — Auto-detect installed applications and generate config.yaml via `menuworks generate` (see [DISCOVERY.md](DISCOVERY.md))
 
 ## Installation
 
@@ -368,6 +369,26 @@ Press **R** in any menu to reload your config **and apply the new theme** immedi
 | `-no-splash` | Skip the splash screen | Show splash |
 
 All flags can also be set in `config.yaml` (see `initial_menu` and `splash_screen`). CLI flags override config values.
+
+### Generate Subcommand
+
+Automatically discover installed applications and generate a `config.yaml` file:
+
+```bash
+# Discover all applications and write config.yaml
+menuworks generate
+
+# Preview without writing
+menuworks generate --dry-run
+
+# Only scan specific sources
+menuworks generate --sources steam,startmenu
+
+# List available discovery sources
+menuworks generate --list-sources
+```
+
+For full documentation, see [DISCOVERY.md](DISCOVERY.md).
 ### Navigation
 
 | Key | Action |
