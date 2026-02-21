@@ -615,7 +615,7 @@ menuworks/
 ### Key Design Decisions
 
 - **Single Binary**: All assets (config template, logo) embedded via `//go:embed`
-- **No Mouse**: Keyboard-only navigation for retro feel
+- **Mouse Support**: Optional mouse support (scroll, click) — enabled by default, disable with `mouse_support: false`
 - **Deterministic Rendering**: No flicker, smooth 400ms splash screen
 - **Selection Memory**: Per-session tracking allows quick menu traversal
 - **Config Reload**: Live reload without losing user's current menu depth
