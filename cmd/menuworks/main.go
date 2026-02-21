@@ -23,6 +23,8 @@ var version string
 func main() {
 	// Parse command-line flags
 	configFlag := flag.String("config", "", "Path to config.yaml file (default: same directory as binary)")
+	menuFlag := flag.String("menu", "", "Initial menu to display (default: root menu)")
+	noSplashFlag := flag.Bool("no-splash", false, "Skip the splash screen on startup")
 	flag.Parse()
 
 	// Determine config path and whether auto-creation is allowed
@@ -91,21 +93,29 @@ func main() {
 	// Apply theme from config (if specified)
 	applyThemeFromConfig(screen, cfg)
 
-	// Show splash screen with fixed 1000ms delay
-	screen.DrawSplashScreen(version)
-	
-	// Consume and discard all events during splash (prevents macOS hang)
-	// Per spec: "key events are consumed and discarded by reading and ignoring tcell events"
-	splashStart := time.Now()
-	for time.Since(splashStart) < 1000*time.Millisecond {
-		select {
-		case <-eventChan:
-			// Event discarded (consumed but ignored)
-		case <-time.After(10 * time.Millisecond):
-			// No event, continue waiting
+	// Determine if splash screen should be shown (CLI flag overrides config)
+	showSplash := cfg.IsSplashEnabled()
+	if *noSplashFlag {
+		showSplash = false
+	}
+
+	if showSplash {
+		// Show splash screen with fixed 1000ms delay
+		screen.DrawSplashScreen(version)
+
+		// Consume and discard all events during splash (prevents macOS hang)
+		// Per spec: "key events are consumed and discarded by reading and ignoring tcell events"
+		splashStart := time.Now()
+		for time.Since(splashStart) < 1000*time.Millisecond {
+			select {
+			case <-eventChan:
+				// Event discarded (consumed but ignored)
+			case <-time.After(10 * time.Millisecond):
+				// No event, continue waiting
+			}
 		}
 	}
-	
+
 	// Explicitly clear screen before transitioning to menu
 	screen.Clear()
 	screen.Sync()
@@ -117,6 +127,15 @@ func main() {
 
 	// Create navigator
 	navigator := menu.NewNavigator(cfg)
+
+	// Navigate to initial menu (CLI flag overrides config; silently ignored if not found)
+	initialMenu := cfg.InitialMenu
+	if *menuFlag != "" {
+		initialMenu = *menuFlag
+	}
+	if initialMenu != "" {
+		navigator.NavigateToMenu(initialMenu)
+	}
 
 	// Check for missing submenu targets on startup and report once per session
 	checkAndReportMissingTargets(screen, navigator)

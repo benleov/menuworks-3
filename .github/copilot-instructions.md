@@ -284,12 +284,14 @@ themes:
 ## Runtime Behaviour
 ### Startup
 1. Parse `-config` flag; if provided, use that path. Otherwise, use `config.yaml` from binary directory.
-2. If missing, write embedded default config.
-3. Show splash screen (fixed 400ms delay for consistent retro feel, not dismissible by keypress, not user-configurable) with:
+2. Parse `-menu` flag and `-no-splash` flag.
+3. If missing, write embedded default config.
+4. Show splash screen unless disabled by `-no-splash` flag or `splash_screen: false` in config (CLI flag overrides config). Fixed 1000ms delay, not dismissible by keypress.
    - Project name  
    - Version (injected via `-ldflags` at build time, read from a version variable in main)
    - Optional ASCII logo
-   - During the splash screen, key events are consumed and discarded by reading and ignoring tcell events rather than flushing the terminal buffer, ensuring no accidental actions occur afterward  
+   - During the splash screen, key events are consumed and discarded by reading and ignoring tcell events rather than flushing the terminal buffer, ensuring no accidental actions occur afterward
+5. Navigate to initial menu if `-menu` flag or `initial_menu` config field is set (CLI overrides config). If the menu doesn't exist, silently fall back to root.
 
 ### Navigation
 - Up/Down: move selection  
