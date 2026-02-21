@@ -110,7 +110,8 @@ The UI should be retro, clean, responsive, and centered around **hierarchical me
 ## Config File Location
 
 **Filename:** `config.yaml`  
-**Location:** Same directory as the binary.
+**Default location:** Same directory as the binary.  
+**Override:** Use `-config <path>` flag to specify a custom config file path.
 
 The binary name is `menuworks` (or `menuworks.exe` on Windows).
 
@@ -281,7 +282,7 @@ themes:
 
 ## Runtime Behaviour
 ### Startup
-1. Load `config.yaml` from binary directory.
+1. Parse `-config` flag; if provided, use that path. Otherwise, use `config.yaml` from binary directory.
 2. If missing, write embedded default config.
 3. Show splash screen (fixed 400ms delay for consistent retro feel, not dismissible by keypress, not user-configurable) with:
    - Project name  

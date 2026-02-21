@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -137,6 +138,85 @@ func TestMenuItemHelpField(t *testing.T) {
 
 	if item.Label != "Test Command" {
 		t.Errorf("expected label %q, got %q", "Test Command", item.Label)
+	}
+}
+
+func TestLoadFromCustomPath(t *testing.T) {
+	// Create a temp directory with a custom config
+	dir := t.TempDir()
+	customPath := dir + "/custom.yaml"
+
+	yamlContent := `title: "Custom Config"
+items:
+  - type: command
+    label: "Hello"
+    exec:
+      windows: "echo hello"
+      linux: "echo hello"
+      mac: "echo hello"
+`
+	if err := os.WriteFile(customPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("failed to write custom config: %v", err)
+	}
+
+	cfg, created, err := Load(customPath)
+	if err != nil {
+		t.Fatalf("failed to load custom config: %v", err)
+	}
+	if created {
+		t.Fatalf("expected created=false for existing custom config")
+	}
+	if cfg.Title != "Custom Config" {
+		t.Errorf("expected title %q, got %q", "Custom Config", cfg.Title)
+	}
+	if len(cfg.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(cfg.Items))
+	}
+	if cfg.Items[0].Label != "Hello" {
+		t.Errorf("expected label %q, got %q", "Hello", cfg.Items[0].Label)
+	}
+}
+
+func TestLoadCreatesDefaultWhenMissing(t *testing.T) {
+	dir := t.TempDir()
+	missingPath := dir + "/nonexistent.yaml"
+
+	cfg, created, err := Load(missingPath)
+	if err != nil {
+		t.Fatalf("failed to load (should create default): %v", err)
+	}
+	if !created {
+		t.Fatalf("expected created=true for missing config")
+	}
+	if cfg.Title == "" {
+		t.Errorf("expected non-empty title from default config")
+	}
+
+	// Verify the file was actually created
+	if _, err := os.Stat(missingPath); os.IsNotExist(err) {
+		t.Errorf("expected default config file to be created at %s", missingPath)
+	}
+}
+
+func TestMouseSupportConfig(t *testing.T) {
+	// Test default (omitted) — should be enabled
+	cfg := &Config{}
+	if !cfg.IsMouseEnabled() {
+		t.Errorf("expected mouse enabled by default when omitted")
+	}
+
+	// Test explicit true
+	trueVal := true
+	cfg.MouseSupport = &trueVal
+	if !cfg.IsMouseEnabled() {
+		t.Errorf("expected mouse enabled when set to true")
+	}
+
+	// Test explicit false
+	falseVal := false
+	cfg.MouseSupport = &falseVal
+	if cfg.IsMouseEnabled() {
+		t.Errorf("expected mouse disabled when set to false")
 	}
 }
 
