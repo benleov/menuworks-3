@@ -169,6 +169,9 @@ func buildFlatMenu(category string, apps []DiscoveredApp, osKey string, menusNod
 		setExecOS(item.Exec, osKey, a.Exec)
 		menuItems = append(menuItems, item)
 	}
+	if len(menuItems) > 0 {
+		menuItems = append(menuItems, yamlItem{Type: "separator"})
+	}
 	menuItems = append(menuItems, yamlItem{Type: "back", Label: "Back"})
 
 	menu := yamlMenu{
@@ -209,6 +212,9 @@ func buildMultiSourceMenus(category string, sourceGroups map[string][]Discovered
 			Target: subID,
 		})
 	}
+	if len(catItems) > 0 {
+		catItems = append(catItems, yamlItem{Type: "separator"})
+	}
 	catItems = append(catItems, yamlItem{Type: "back", Label: "Back"})
 
 	catMenu := yamlMenu{
@@ -237,6 +243,9 @@ func buildMultiSourceMenus(category string, sourceGroups map[string][]Discovered
 			}
 			setExecOS(item.Exec, osKey, a.Exec)
 			subItems = append(subItems, item)
+		}
+		if len(subItems) > 0 {
+			subItems = append(subItems, yamlItem{Type: "separator"})
 		}
 		subItems = append(subItems, yamlItem{Type: "back", Label: "Back"})
 

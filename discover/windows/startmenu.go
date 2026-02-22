@@ -68,7 +68,7 @@ func (s *StartMenuSource) Discover() ([]discover.DiscoveredApp, error) {
 			apps = append(apps, discover.DiscoveredApp{
 				Name:     name,
 				Exec:     target,
-				Source:   "startmenu",
+				Source:   "Start Menu",
 				Category: "Applications",
 			})
 			return nil
