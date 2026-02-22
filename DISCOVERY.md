@@ -79,7 +79,7 @@ Scans all available sources and writes `config.yaml` to the current directory.
 | `--sources` | Comma-separated list of sources to use | all available |
 | `--list-sources` | List available sources and exit | |
 | `--dry-run` | Print generated config to stdout instead of writing a file | |
-| `--merge` | Merge discovered items into an existing config file | |
+| `--base` | Base config file to merge discovered apps into (base takes priority) | |
 
 ### Examples
 
@@ -99,9 +99,15 @@ menuworks generate --output my-config.yaml
 # List available discovery sources
 menuworks generate --list-sources
 
-# Merge new discoveries into existing config
-menuworks generate --merge --output existing-config.yaml
+# Merge discovered apps into your own base config
+menuworks generate --base myconfig.yaml --output merged.yaml
+
+# Preview a merge without writing
+menuworks generate --base myconfig.yaml --dry-run
 ```
+
+**Safety:** The generate command refuses to write if the output file already exists.
+Choose a different `--output` path or remove the existing file first.
 
 ## Sources
 
@@ -245,14 +251,59 @@ menus:
         label: "Back"
 ```
 
-## Merge Mode
+## Base Config Merge
 
-When `--merge` is used with an existing config file:
-- Existing menu structure is preserved
-- New discovered items are appended to matching category submenus
-- New categories create new submenus
-- Duplicate detection by executable path prevents adding the same app twice
-- A backup of the original file is created (`config.yaml.bak`)
+When `--base` is used, the specified config file acts as the foundation. Discovered
+apps are merged in, with the base config taking priority on all conflicts:
+
+| Config element | Merge behaviour |
+|---|---|
+| `title` | Base wins if set; otherwise uses generated title |
+| `theme` | Base wins if set |
+| `themes` | Merged by name — base themes win per-key, generated themes fill gaps |
+| Root `items` | Base items preserved in order. Generated category submenu entries inserted before the trailing separator/back block, skipping duplicates by target |
+| `menus` | Merged by key — base menus kept untouched, generated menus added for new keys only |
+| Other fields (`mouse_support`, `initial_menu`, `splash_screen`) | Base values preserved |
+
+### Example
+
+Given a base config with custom scripts and a separator/quit block:
+
+```yaml
+title: "My Launcher"
+items:
+  - type: command
+    label: "Open Terminal"
+    exec:
+      windows: "wt.exe"
+  - type: submenu
+    label: "My Scripts"
+    target: "scripts"
+  - type: separator
+  - type: back
+    label: "Quit"
+menus:
+  scripts:
+    title: "My Scripts"
+    items:
+      - type: command
+        label: "Deploy"
+        exec:
+          windows: "deploy.bat"
+      - type: back
+        label: "Back"
+```
+
+After `menuworks generate --base myconfig.yaml --output merged.yaml`, discovered
+category submenus (e.g. Games, Applications) are inserted before the separator,
+and corresponding generated menus are added. The base title, items, and menus
+are untouched.
+
+### Idempotency
+
+Running the merge again with the same base and discovered apps produces identical
+output. Using the merged output as the new base also works — already-present menus
+and submenu entries are skipped.
 
 ## Adding New Sources
 

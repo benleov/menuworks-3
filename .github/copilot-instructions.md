@@ -386,6 +386,10 @@ The embedded default config in `/assets/` should contain:
 
 The `discover/` package provides automatic application discovery for generating `config.yaml` files. It is accessed via the `menuworks generate` subcommand.
 
+**Base config merge (`--base`):** Users can provide their own config as a base. Discovered apps are merged in with base taking priority on conflicts. The merge logic lives in `discover/merge.go`. See DISCOVERY.md for full merge semantics.
+
+**Safety:** The `generate` command refuses to overwrite existing output files. The user must choose a different `--output` path or remove the existing file.
+
 **Isolation requirement:** The `discover/` package must have **zero imports** from `config/`, `menu/`, `ui/`, or `exec/`. Likewise, those packages must not import `discover/`. The only integration point is `cmd/menuworks/generate.go`. This separation ensures discovery complexity does not leak into the core menu system.
 
 ## Go Technology Requirements
