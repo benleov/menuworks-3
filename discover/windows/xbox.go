@@ -67,16 +67,18 @@ func (s *XboxSource) Discover() ([]discover.DiscoveredApp, error) {
 }
 
 // xboxDiscoveryScript is the PowerShell command that enumerates Store gaming packages.
-// It cross-references AppxPackage with GamingServices to identify games.
+// It cross-references AppxPackage with the GamingServices\PackageRepository\Root
+// registry, which stores PackageFamilyNames (not full package names) of games
+// registered with Xbox/Gaming Services.
 const xboxDiscoveryScript = `$ErrorActionPreference = 'SilentlyContinue'
-$gaming = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\GamingServices\PackageRepository\Package\*' 2>$null | Select-Object -ExpandProperty PSChildName 2>$null
-if (-not $gaming) { '[]'; exit 0 }
+$root = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\GamingServices\PackageRepository\Root' 2>$null | Select-Object -ExpandProperty PSChildName 2>$null
+if (-not $root) { '[]'; exit 0 }
 $gamePfns = @{}
-foreach ($g in $gaming) {
-    $parts = $g -split '_'
-    if ($parts.Count -ge 2) { $gamePfns[$parts[0]] = $true }
+foreach ($r in $root) {
+    if ($r -match '^[A-Za-z]') { $gamePfns[$r] = $true }
 }
-$pkgs = Get-AppxPackage | Where-Object { -not $_.IsFramework -and $gamePfns.ContainsKey($_.Name) } | Select-Object Name, PackageFamilyName | ConvertTo-Json -Compress
+if ($gamePfns.Count -eq 0) { '[]'; exit 0 }
+$pkgs = Get-AppxPackage | Where-Object { -not $_.IsFramework -and $gamePfns.ContainsKey($_.PackageFamilyName) } | Select-Object Name, PackageFamilyName | ConvertTo-Json -Compress
 if (-not $pkgs) { '[]' } else { $pkgs }`
 
 // appxPackage represents the relevant fields from Get-AppxPackage JSON output.

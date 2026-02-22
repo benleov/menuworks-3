@@ -60,7 +60,7 @@ func runGenerate(args []string) {
 	}
 
 	// Run discovery
-	fmt.Println("Discovering applications...")
+	fmt.Fprintf(os.Stderr, "Discovering applications...\n")
 	results, err := registry.DiscoverAll(sourceNames)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -73,23 +73,22 @@ func runGenerate(args []string) {
 		if r.Err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: %s: %v\n", r.Source, r.Err)
 		} else {
-			fmt.Printf("  %s: found %d applications\n", r.Source, len(r.Apps))
+			fmt.Fprintf(os.Stderr, "  %s: found %d applications\n", r.Source, len(r.Apps))
 			totalApps += len(r.Apps)
 		}
 	}
 
 	if totalApps == 0 {
-		fmt.Println("No applications discovered.")
+		fmt.Fprintf(os.Stderr, "No applications discovered.\n")
 		return
 	}
 
 	// Collect, deduplicate, and generate
 	apps := discover.CollectApps(results)
 	apps = discover.DeduplicateApps(apps)
-	fmt.Printf("Total: %d unique applications\n", len(apps))
+	fmt.Fprintf(os.Stderr, "Total: %d unique applications\n", len(apps))
 
 	if *dryRun {
-		fmt.Println("\n--- Generated config.yaml ---")
 		if err := discover.WriteConfigStdout(apps); err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating config: %v\n", err)
 			os.Exit(1)
