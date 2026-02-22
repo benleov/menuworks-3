@@ -57,13 +57,14 @@ jobs:
         run: |
           go test -v ./config
           go test -v ./menu
+          go test -v ./discover
 
       - name: Run build (verify compilation)
         run: |
-          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-windows.exe cmd/menuworks/main.go
-          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-linux cmd/menuworks/main.go
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-macos cmd/menuworks/main.go
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=test" -o dist/test-macos-arm64 cmd/menuworks/main.go
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-windows.exe ./cmd/menuworks
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-linux ./cmd/menuworks
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=test" -o dist/test-macos ./cmd/menuworks
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=test" -o dist/test-macos-arm64 ./cmd/menuworks
           echo "All builds succeeded"
 
       - name: Clean up test binaries
