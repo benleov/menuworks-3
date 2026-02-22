@@ -316,3 +316,292 @@ func TestProgramFilesDirs(t *testing.T) {
 		}
 	}
 }
+
+// --- Xbox Source Tests ---
+
+func TestCleanPackageName(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"Microsoft.MinecraftUWP", "Minecraft"},
+		{"BethesdaSoftworks.Starfield", "Starfield"},
+		{"343Industries.HaloInfinite", "Halo Infinite"},
+		{"EA.DeadSpaceRemake", "Dead Space Remake"},
+		{"Microsoft.SeaOfThievesW10", "Sea Of Thieves"},
+		{"Ubisoft.FarCry6Beta", "Far Cry6"},
+		{"Simple", "Simple"},
+		{"Publisher.GameWindows", "Game"},
+		{"Publisher.GamePC", "Game"},
+		{"Publisher.GamePreview", "Game"},
+	}
+
+	for _, tc := range tests {
+		got := cleanPackageName(tc.input)
+		if got != tc.expected {
+			t.Errorf("cleanPackageName(%q) = %q, expected %q", tc.input, got, tc.expected)
+		}
+	}
+}
+
+func TestSplitCamelCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"HaloInfinite", "Halo Infinite"},
+		{"DeadSpaceRemake", "Dead Space Remake"},
+		{"Minecraft", "Minecraft"},
+		{"XMLParser", "XML Parser"},
+		{"", ""},
+		{"lowercase", "lowercase"},
+		{"A", "A"},
+		{"AB", "AB"},
+		{"ABc", "A Bc"},
+	}
+
+	for _, tc := range tests {
+		got := splitCamelCase(tc.input)
+		if got != tc.expected {
+			t.Errorf("splitCamelCase(%q) = %q, expected %q", tc.input, got, tc.expected)
+		}
+	}
+}
+
+func TestBuildAUMID(t *testing.T) {
+	tests := []struct {
+		pfn      string
+		appID    string
+		expected string
+	}{
+		{"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "App", "Microsoft.MinecraftUWP_8wekyb3d8bbwe!App"},
+		{"Bethesda.Starfield_3275kfvn8vcwc", "Game", "Bethesda.Starfield_3275kfvn8vcwc!Game"},
+		{"Publisher.Game_abc123", "App", "Publisher.Game_abc123!App"},
+	}
+
+	for _, tc := range tests {
+		got := buildAUMID(tc.pfn, tc.appID)
+		if got != tc.expected {
+			t.Errorf("buildAUMID(%q, %q) = %q, expected %q", tc.pfn, tc.appID, got, tc.expected)
+		}
+	}
+}
+
+func TestParseAppxJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		count    int
+		wantErr  bool
+	}{
+		{
+			name:  "array of packages",
+			input: `[{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe"},{"Name":"Bethesda.Starfield","PackageFamilyName":"Bethesda.Starfield_3275kfvn8vcwc"}]`,
+			count: 2,
+		},
+		{
+			name:  "single object (PowerShell quirk)",
+			input: `{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe"}`,
+			count: 1,
+		},
+		{
+			name:  "empty array",
+			input: `[]`,
+			count: 0,
+		},
+		{
+			name:  "empty string",
+			input: ``,
+			count: 0,
+		},
+		{
+			name:  "null",
+			input: `null`,
+			count: 0,
+		},
+		{
+			name:    "invalid JSON",
+			input:   `{not valid json`,
+			count:   0,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			pkgs, err := parseAppxJSON([]byte(tc.input))
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(pkgs) != tc.count {
+				t.Fatalf("expected %d packages, got %d", tc.count, len(pkgs))
+			}
+		})
+	}
+}
+
+func TestParseAppxJSONFields(t *testing.T) {
+	input := `{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe"}`
+	pkgs, err := parseAppxJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pkgs) != 1 {
+		t.Fatalf("expected 1 package, got %d", len(pkgs))
+	}
+	if pkgs[0].Name != "Microsoft.MinecraftUWP" {
+		t.Errorf("expected Name 'Microsoft.MinecraftUWP', got %q", pkgs[0].Name)
+	}
+	if pkgs[0].PackageFamilyName != "Microsoft.MinecraftUWP_8wekyb3d8bbwe" {
+		t.Errorf("expected PackageFamilyName, got %q", pkgs[0].PackageFamilyName)
+	}
+}
+
+func TestIsGamePackage(t *testing.T) {
+	tests := []struct {
+		name    string
+		pkg     appxPackage
+		isGame  bool
+	}{
+		{"regular game", appxPackage{Name: "Bethesda.Starfield", PackageFamilyName: "Bethesda.Starfield_abc"}, true},
+		{"minecraft", appxPackage{Name: "Microsoft.MinecraftUWP", PackageFamilyName: "Microsoft.MinecraftUWP_abc"}, true},
+		{"gaming services", appxPackage{Name: "Microsoft.GamingServices", PackageFamilyName: "Microsoft.GamingServices_abc"}, false},
+		{"xbox app", appxPackage{Name: "Microsoft.XboxApp", PackageFamilyName: "Microsoft.XboxApp_abc"}, false},
+		{"game bar", appxPackage{Name: "Microsoft.XboxGameBar", PackageFamilyName: "Microsoft.XboxGameBar_abc"}, false},
+		{"gaming overlay", appxPackage{Name: "Microsoft.XboxGamingOverlay", PackageFamilyName: "Microsoft.XboxGamingOverlay_abc"}, false},
+		{"identity provider", appxPackage{Name: "Microsoft.XboxIdentityProvider", PackageFamilyName: "Microsoft.XboxIdentityProvider_abc"}, false},
+		{"speech to text", appxPackage{Name: "Microsoft.XboxSpeechToText", PackageFamilyName: "Microsoft.XboxSpeechToText_abc"}, false},
+		{"empty name", appxPackage{Name: "", PackageFamilyName: "abc"}, false},
+		{"empty pfn", appxPackage{Name: "Game", PackageFamilyName: ""}, false},
+		{"both empty", appxPackage{}, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isGamePackage(tc.pkg)
+			if got != tc.isGame {
+				t.Errorf("isGamePackage(%+v) = %v, expected %v", tc.pkg, got, tc.isGame)
+			}
+		})
+	}
+}
+
+func TestXboxSourceMetadata(t *testing.T) {
+	s := &XboxSource{}
+	if s.Name() != "xbox" {
+		t.Errorf("expected Name 'xbox', got %q", s.Name())
+	}
+	if s.Category() != "Games" {
+		t.Errorf("expected Category 'Games', got %q", s.Category())
+	}
+}
+
+func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
+	// Override runPowerShellCommand to simulate PowerShell output
+	origRunner := runPowerShellCommand
+	defer func() { runPowerShellCommand = origRunner }()
+
+	runPowerShellCommand = func(script string) ([]byte, error) {
+		return []byte(`[{"Name":"Bethesda.Starfield","PackageFamilyName":"Bethesda.Starfield_3275kfvn8vcwc"},{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe"},{"Name":"Microsoft.GamingServices","PackageFamilyName":"Microsoft.GamingServices_abc"}]`), nil
+	}
+
+	s := &XboxSource{}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	// GamingServices should be filtered out
+	if len(apps) != 2 {
+		t.Fatalf("expected 2 apps (GamingServices filtered), got %d", len(apps))
+	}
+
+	// Check names are cleaned
+	names := map[string]bool{}
+	for _, a := range apps {
+		names[a.Name] = true
+	}
+	if !names["Starfield"] {
+		t.Error("expected 'Starfield' in results")
+	}
+	if !names["Minecraft"] {
+		t.Error("expected 'Minecraft' in results")
+	}
+
+	// Check exec format
+	for _, a := range apps {
+		if !strings.HasPrefix(a.Exec, "start shell:AppsFolder\\") {
+			t.Errorf("expected exec to start with 'start shell:AppsFolder\\', got %q", a.Exec)
+		}
+		if !strings.Contains(a.Exec, "!App") {
+			t.Errorf("expected exec to contain '!App', got %q", a.Exec)
+		}
+		if a.Source != "xbox" {
+			t.Errorf("expected source 'xbox', got %q", a.Source)
+		}
+		if a.Category != "Games" {
+			t.Errorf("expected category 'Games', got %q", a.Category)
+		}
+	}
+}
+
+func TestXboxDiscoverEmptyResult(t *testing.T) {
+	origRunner := runPowerShellCommand
+	defer func() { runPowerShellCommand = origRunner }()
+
+	runPowerShellCommand = func(script string) ([]byte, error) {
+		return []byte(`[]`), nil
+	}
+
+	s := &XboxSource{}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+	if len(apps) != 0 {
+		t.Fatalf("expected 0 apps, got %d", len(apps))
+	}
+}
+
+func TestXboxDiscoverPowerShellError(t *testing.T) {
+	origRunner := runPowerShellCommand
+	defer func() { runPowerShellCommand = origRunner }()
+
+	runPowerShellCommand = func(script string) ([]byte, error) {
+		return nil, os.ErrNotExist
+	}
+
+	s := &XboxSource{}
+	apps, err := s.Discover()
+	if err == nil {
+		t.Fatal("expected error when PowerShell fails")
+	}
+	if apps != nil {
+		t.Fatalf("expected nil apps on error, got %d", len(apps))
+	}
+}
+
+func TestXboxDiscoverDeduplicates(t *testing.T) {
+	origRunner := runPowerShellCommand
+	defer func() { runPowerShellCommand = origRunner }()
+
+	// Same game name appearing twice (different package versions)
+	runPowerShellCommand = func(script string) ([]byte, error) {
+		return []byte(`[{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_abc"},{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_def"}]`), nil
+	}
+
+	s := &XboxSource{}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+	if len(apps) != 1 {
+		t.Fatalf("expected 1 app after internal dedup, got %d", len(apps))
+	}
+}

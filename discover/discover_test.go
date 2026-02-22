@@ -664,3 +664,290 @@ func TestEndToEndDeduplication(t *testing.T) {
 		t.Fatalf("expected 1 app after dedup, got %d", len(apps))
 	}
 }
+
+// --- GroupBySource Tests ---
+
+func TestGroupBySource(t *testing.T) {
+	apps := []DiscoveredApp{
+		{Name: "A", Source: "steam"},
+		{Name: "B", Source: "xbox"},
+		{Name: "C", Source: "steam"},
+	}
+
+	groups := GroupBySource(apps)
+	if len(groups) != 2 {
+		t.Fatalf("expected 2 groups, got %d", len(groups))
+	}
+	if len(groups["steam"]) != 2 {
+		t.Fatalf("expected 2 items in steam, got %d", len(groups["steam"]))
+	}
+	if len(groups["xbox"]) != 1 {
+		t.Fatalf("expected 1 item in xbox, got %d", len(groups["xbox"]))
+	}
+}
+
+func TestGroupBySourceEmpty(t *testing.T) {
+	groups := GroupBySource(nil)
+	if len(groups) != 0 {
+		t.Fatalf("expected 0 groups, got %d", len(groups))
+	}
+}
+
+func TestGroupBySourceSingle(t *testing.T) {
+	apps := []DiscoveredApp{
+		{Name: "A", Source: "steam"},
+		{Name: "B", Source: "steam"},
+	}
+	groups := GroupBySource(apps)
+	if len(groups) != 1 {
+		t.Fatalf("expected 1 group, got %d", len(groups))
+	}
+}
+
+// --- titleCase Tests ---
+
+func TestTitleCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"steam", "Steam"},
+		{"xbox", "Xbox"},
+		{"", ""},
+		{"Steam", "Steam"},
+		{"startmenu", "Startmenu"},
+	}
+	for _, tc := range tests {
+		got := titleCase(tc.input)
+		if got != tc.expected {
+			t.Errorf("titleCase(%q) = %q, expected %q", tc.input, got, tc.expected)
+		}
+	}
+}
+
+// --- Multi-Source Writer Tests ---
+
+func TestRenderConfigMultiSourceCategory(t *testing.T) {
+	origOS := writerOS
+	writerOS = "windows"
+	defer func() { writerOS = origOS }()
+
+	apps := []DiscoveredApp{
+		{Name: "Half-Life 2", Exec: "start steam://rungameid/220", Source: "steam", Category: "Games"},
+		{Name: "Portal 2", Exec: "start steam://rungameid/620", Source: "steam", Category: "Games"},
+		{Name: "Minecraft", Exec: `start shell:AppsFolder\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App`, Source: "xbox", Category: "Games"},
+	}
+
+	var buf bytes.Buffer
+	err := RenderConfig(apps, &buf)
+	if err != nil {
+		t.Fatalf("RenderConfig failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// The root menu should have a "Games" submenu
+	if !strings.Contains(output, "Games") {
+		t.Error("missing Games category")
+	}
+
+	// The games menu should have source-based submenu entries
+	if !strings.Contains(output, "games_steam") {
+		t.Error("missing games_steam submenu target")
+	}
+	if !strings.Contains(output, "games_xbox") {
+		t.Error("missing games_xbox submenu target")
+	}
+
+	// Source submenus should have titlecased labels
+	if !strings.Contains(output, "Steam") {
+		t.Error("missing Steam submenu label")
+	}
+	if !strings.Contains(output, "Xbox") {
+		t.Error("missing Xbox submenu label")
+	}
+
+	// Individual games should appear in their source submenus
+	if !strings.Contains(output, "Half-Life 2") {
+		t.Error("missing Half-Life 2")
+	}
+	if !strings.Contains(output, "Minecraft") {
+		t.Error("missing Minecraft")
+	}
+
+	// Verify YAML validity
+	var parsed map[string]interface{}
+	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("generated YAML is invalid: %v", err)
+	}
+
+	// Verify menus structure contains source sub-menus
+	menus, ok := parsed["menus"].(map[string]interface{})
+	if !ok {
+		t.Fatal("menus field missing or wrong type")
+	}
+	if _, ok := menus["games"]; !ok {
+		t.Error("missing 'games' menu")
+	}
+	if _, ok := menus["games_steam"]; !ok {
+		t.Error("missing 'games_steam' sub-menu")
+	}
+	if _, ok := menus["games_xbox"]; !ok {
+		t.Error("missing 'games_xbox' sub-menu")
+	}
+}
+
+func TestRenderConfigSingleSourceUnchanged(t *testing.T) {
+	origOS := writerOS
+	writerOS = "windows"
+	defer func() { writerOS = origOS }()
+
+	// Single source in a category should NOT produce sub-menus
+	apps := []DiscoveredApp{
+		{Name: "Half-Life 2", Exec: "start steam://rungameid/220", Source: "steam", Category: "Games"},
+		{Name: "Portal 2", Exec: "start steam://rungameid/620", Source: "steam", Category: "Games"},
+	}
+
+	var buf bytes.Buffer
+	err := RenderConfig(apps, &buf)
+	if err != nil {
+		t.Fatalf("RenderConfig failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should have games menu with command items directly
+	if !strings.Contains(output, "Half-Life 2") {
+		t.Error("missing Half-Life 2")
+	}
+
+	// Should NOT have source sub-menus
+	if strings.Contains(output, "games_steam") {
+		t.Error("single-source category should not produce source sub-menus")
+	}
+
+	// Verify YAML validity
+	var parsed map[string]interface{}
+	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("generated YAML is invalid: %v", err)
+	}
+}
+
+func TestRenderConfigMixedCategories(t *testing.T) {
+	origOS := writerOS
+	writerOS = "windows"
+	defer func() { writerOS = origOS }()
+
+	apps := []DiscoveredApp{
+		// Games from two sources -> should get sub-menus
+		{Name: "HL2", Exec: "steam://220", Source: "steam", Category: "Games"},
+		{Name: "MC", Exec: "shell:mc", Source: "xbox", Category: "Games"},
+		// Applications from one source -> should stay flat
+		{Name: "Notepad", Exec: "notepad.exe", Source: "startmenu", Category: "Applications"},
+	}
+
+	var buf bytes.Buffer
+	err := RenderConfig(apps, &buf)
+	if err != nil {
+		t.Fatalf("RenderConfig failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Games should have sub-menus
+	if !strings.Contains(output, "games_steam") {
+		t.Error("multi-source Games should have games_steam")
+	}
+	if !strings.Contains(output, "games_xbox") {
+		t.Error("multi-source Games should have games_xbox")
+	}
+
+	// Applications should NOT have sub-menus
+	if strings.Contains(output, "applications_startmenu") {
+		t.Error("single-source Applications should not have source sub-menus")
+	}
+
+	// Applications should have the command directly
+	if !strings.Contains(output, "Notepad") {
+		t.Error("missing Notepad in Applications menu")
+	}
+
+	var parsed map[string]interface{}
+	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("generated YAML is invalid: %v", err)
+	}
+}
+
+// --- End-to-End with Multi-Source ---
+
+func TestEndToEndMultiSourceGames(t *testing.T) {
+	origOS := writerOS
+	writerOS = "windows"
+	defer func() { writerOS = origOS }()
+
+	r := NewRegistry()
+	r.Register(&mockSource{
+		name:      "steam",
+		category:  "Games",
+		available: true,
+		apps: []DiscoveredApp{
+			{Name: "Portal 2", Exec: "start steam://rungameid/620", Source: "steam", Category: "Games"},
+		},
+	})
+	r.Register(&mockSource{
+		name:      "xbox",
+		category:  "Games",
+		available: true,
+		apps: []DiscoveredApp{
+			{Name: "Minecraft", Exec: `start shell:AppsFolder\MC!App`, Source: "xbox", Category: "Games"},
+		},
+	})
+	r.Register(&mockSource{
+		name:      "startmenu",
+		category:  "Applications",
+		available: true,
+		apps: []DiscoveredApp{
+			{Name: "Firefox", Exec: `C:\firefox.exe`, Source: "startmenu", Category: "Applications"},
+		},
+	})
+
+	results, err := r.DiscoverAll(nil)
+	if err != nil {
+		t.Fatalf("DiscoverAll failed: %v", err)
+	}
+
+	apps := CollectApps(results)
+	apps = DeduplicateApps(apps)
+
+	var buf bytes.Buffer
+	err = RenderConfig(apps, &buf)
+	if err != nil {
+		t.Fatalf("RenderConfig failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Games should have source sub-menus
+	expectedStrings := []string{
+		"games_steam", "games_xbox",
+		"Steam", "Xbox",
+		"Portal 2", "Minecraft",
+		"Firefox", "applications",
+		"Quit", "Back",
+	}
+	for _, s := range expectedStrings {
+		if !strings.Contains(output, s) {
+			t.Errorf("expected output to contain %q", s)
+		}
+	}
+
+	// Applications should NOT have source sub-menus
+	if strings.Contains(output, "applications_startmenu") {
+		t.Error("single-source Applications should not have source sub-menus")
+	}
+
+	var parsed map[string]interface{}
+	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("generated YAML is invalid: %v", err)
+	}
+}

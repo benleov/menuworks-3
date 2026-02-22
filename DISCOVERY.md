@@ -22,6 +22,7 @@ discover/
     windows/
         startmenu.go         # Start Menu shortcut (.lnk) discovery
         steam.go             # Steam library manifest parsing
+        xbox.go              # Xbox / Microsoft Store game discovery
         programfiles.go      # Program Files .exe scanning
         windows_test.go      # Windows source tests
     linux/                   # (future)
@@ -118,6 +119,15 @@ menuworks generate --merge --output existing-config.yaml
 - **Method:** Parses Valve's VDF format to find installed games
 - **Launch:** Uses `steam://rungameid/<appid>` protocol for launching
 
+#### Xbox / Microsoft Store (`xbox`)
+- **Category:** Games
+- **Requires:** PowerShell, Xbox app / Gaming Services installed
+- **Scans:** Enumerates AppX packages registered with Windows Gaming Services via `Get-AppxPackage`
+- **Method:** Cross-references installed AppX packages with the `GamingServices\PackageRepository` registry to identify games
+- **Launch:** Uses AUMID (Application User Model ID) pattern: `start shell:AppsFolder\{PackageFamilyName}!App`
+- **Filters:** Removes Xbox infrastructure packages (GamingServices, XboxGameBar, XboxIdentityProvider, etc.)
+- **Graceful failure:** If PowerShell is not available or Get-AppxPackage is missing, the source reports as unavailable and discovery continues with other sources
+
 #### Program Files (`programfiles`)
 - **Category:** Applications
 - **Scans:** `C:\Program Files` and `C:\Program Files (x86)`
@@ -141,7 +151,9 @@ Planned sources:
 
 ## Generated Config Format
 
-The generator produces a standard MenuWorks `config.yaml`:
+The generator produces a standard MenuWorks `config.yaml`. When a category (e.g. Games) has apps from multiple sources (e.g. Steam and Xbox), source-based submenus are created automatically. Single-source categories remain flat.
+
+### Multi-source example (Games from Steam + Xbox)
 
 ```yaml
 title: "MenuWorks 3.X"
@@ -159,15 +171,61 @@ themes:
 
 items:
   - type: submenu
-    label: "Games"
-    target: "games"
-  - type: submenu
     label: "Applications"
     target: "applications"
+  - type: submenu
+    label: "Games"
+    target: "games"
   - type: separator
   - type: back
     label: "Quit"
 
+menus:
+  applications:
+    title: "Applications"
+    items:
+      - type: command
+        label: "Notepad++"
+        exec:
+          windows: "start \"\" \"C:\\Program Files\\Notepad++\\notepad++.exe\""
+      - type: back
+        label: "Back"
+  games:
+    title: "Games"
+    items:
+      - type: submenu
+        label: "Steam"
+        target: "games_steam"
+      - type: submenu
+        label: "Xbox"
+        target: "games_xbox"
+      - type: back
+        label: "Back"
+  games_steam:
+    title: "Steam"
+    items:
+      - type: command
+        label: "Half-Life 2"
+        exec:
+          windows: "start steam://rungameid/220"
+      - type: back
+        label: "Back"
+  games_xbox:
+    title: "Xbox"
+    items:
+      - type: command
+        label: "Minecraft"
+        exec:
+          windows: "start shell:AppsFolder\\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App"
+      - type: back
+        label: "Back"
+```
+
+### Single-source example (Games from Steam only)
+
+When only one source contributes to a category, no sub-menus are created:
+
+```yaml
 menus:
   games:
     title: "Games"
@@ -176,15 +234,6 @@ menus:
         label: "Half-Life 2"
         exec:
           windows: "start steam://rungameid/220"
-      - type: back
-        label: "Back"
-  applications:
-    title: "Applications"
-    items:
-      - type: command
-        label: "Notepad++"
-        exec:
-          windows: "start \"\" \"C:\\Program Files\\Notepad++\\notepad++.exe\""
       - type: back
         label: "Back"
 ```

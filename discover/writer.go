@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 )
@@ -123,39 +124,17 @@ func buildYAMLConfig(apps []DiscoveredApp) yamlConfig {
 	menusNode := yaml.Node{Kind: yaml.MappingNode}
 	for _, name := range catNames {
 		catApps := groups[name]
-		var menuItems []yamlItem
-		for _, a := range catApps {
-			item := yamlItem{
-				Type:  "command",
-				Label: a.Name,
-				Exec:  &yamlExec{},
-			}
-			switch osKey {
-			case "windows":
-				item.Exec.Windows = a.Exec
-			case "linux":
-				item.Exec.Linux = a.Exec
-			case "mac":
-				item.Exec.Mac = a.Exec
-			}
-			menuItems = append(menuItems, item)
-		}
-		menuItems = append(menuItems, yamlItem{Type: "back", Label: "Back"})
 
-		menu := yamlMenu{
-			Title: name,
-			Items: menuItems,
-		}
+		// Check if this category has apps from multiple sources
+		sourceGroups := GroupBySource(catApps)
 
-		// Marshal the menu value to a node
-		var menuNode yaml.Node
-		if err := menuNode.Encode(menu); err != nil {
-			continue
+		if len(sourceGroups) > 1 {
+			// Multiple sources: create sub-menus per source
+			buildMultiSourceMenus(name, sourceGroups, osKey, &menusNode)
+		} else {
+			// Single source (or no source): flat list of commands
+			buildFlatMenu(name, catApps, osKey, &menusNode)
 		}
-
-		// Add key and value nodes
-		keyNode := yaml.Node{Kind: yaml.ScalarNode, Value: sanitizeID(name)}
-		menusNode.Content = append(menusNode.Content, &keyNode, &menuNode)
 	}
 
 	return yamlConfig{
@@ -176,6 +155,125 @@ func buildYAMLConfig(apps []DiscoveredApp) yamlConfig {
 		Items: rootItems,
 		Menus: menusNode,
 	}
+}
+
+// buildFlatMenu adds a single category menu with command items directly listed.
+func buildFlatMenu(category string, apps []DiscoveredApp, osKey string, menusNode *yaml.Node) {
+	var menuItems []yamlItem
+	for _, a := range apps {
+		item := yamlItem{
+			Type:  "command",
+			Label: a.Name,
+			Exec:  &yamlExec{},
+		}
+		setExecOS(item.Exec, osKey, a.Exec)
+		menuItems = append(menuItems, item)
+	}
+	menuItems = append(menuItems, yamlItem{Type: "back", Label: "Back"})
+
+	menu := yamlMenu{
+		Title: category,
+		Items: menuItems,
+	}
+
+	var menuNode yaml.Node
+	if err := menuNode.Encode(menu); err != nil {
+		return
+	}
+	keyNode := yaml.Node{Kind: yaml.ScalarNode, Value: sanitizeID(category)}
+	menusNode.Content = append(menusNode.Content, &keyNode, &menuNode)
+}
+
+// buildMultiSourceMenus adds a category menu that contains submenu items per source,
+// and the individual source sub-menus with the actual commands.
+// For example, category "Games" with sources "steam" and "xbox" produces:
+//
+//	games:       submenu -> games_steam, submenu -> games_xbox, Back
+//	games_steam: command items..., Back
+//	games_xbox:  command items..., Back
+func buildMultiSourceMenus(category string, sourceGroups map[string][]DiscoveredApp, osKey string, menusNode *yaml.Node) {
+	// Sort source names for deterministic output
+	var sourceNames []string
+	for src := range sourceGroups {
+		sourceNames = append(sourceNames, src)
+	}
+	sort.Strings(sourceNames)
+
+	// Build the parent category menu with submenu entries per source
+	var catItems []yamlItem
+	for _, src := range sourceNames {
+		subID := sanitizeID(category + "_" + src)
+		catItems = append(catItems, yamlItem{
+			Type:   "submenu",
+			Label:  titleCase(src),
+			Target: subID,
+		})
+	}
+	catItems = append(catItems, yamlItem{Type: "back", Label: "Back"})
+
+	catMenu := yamlMenu{
+		Title: category,
+		Items: catItems,
+	}
+
+	var catNode yaml.Node
+	if err := catNode.Encode(catMenu); err != nil {
+		return
+	}
+	catKey := yaml.Node{Kind: yaml.ScalarNode, Value: sanitizeID(category)}
+	menusNode.Content = append(menusNode.Content, &catKey, &catNode)
+
+	// Build individual source sub-menus
+	for _, src := range sourceNames {
+		apps := sourceGroups[src]
+		subID := sanitizeID(category + "_" + src)
+
+		var subItems []yamlItem
+		for _, a := range apps {
+			item := yamlItem{
+				Type:  "command",
+				Label: a.Name,
+				Exec:  &yamlExec{},
+			}
+			setExecOS(item.Exec, osKey, a.Exec)
+			subItems = append(subItems, item)
+		}
+		subItems = append(subItems, yamlItem{Type: "back", Label: "Back"})
+
+		subMenu := yamlMenu{
+			Title: titleCase(src),
+			Items: subItems,
+		}
+
+		var subNode yaml.Node
+		if err := subNode.Encode(subMenu); err != nil {
+			continue
+		}
+		subKey := yaml.Node{Kind: yaml.ScalarNode, Value: subID}
+		menusNode.Content = append(menusNode.Content, &subKey, &subNode)
+	}
+}
+
+// setExecOS sets the appropriate OS field on a yamlExec struct.
+func setExecOS(e *yamlExec, osKey, cmd string) {
+	switch osKey {
+	case "windows":
+		e.Windows = cmd
+	case "linux":
+		e.Linux = cmd
+	case "mac":
+		e.Mac = cmd
+	}
+}
+
+// titleCase capitalises the first letter of a string.
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
 }
 
 // sanitizeID converts a display name to a YAML-safe menu ID.
