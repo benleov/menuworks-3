@@ -57,7 +57,7 @@ func (s *ProgramFilesSource) Discover() ([]discover.DiscoveredApp, error) {
 			apps = append(apps, discover.DiscoveredApp{
 				Name:     name,
 				Exec:     exe,
-				Source:   "programfiles",
+				Source:   "Program Files",
 				Category: "Applications",
 			})
 		}
