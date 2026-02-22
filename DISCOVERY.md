@@ -123,10 +123,17 @@ menuworks generate --merge --output existing-config.yaml
 - **Category:** Games
 - **Requires:** PowerShell, Xbox app / Gaming Services installed
 - **Scans:** Enumerates AppX packages registered with Windows Gaming Services via `Get-AppxPackage`
-- **Method:** Cross-references installed AppX packages with the `GamingServices\PackageRepository` registry to identify games
-- **Launch:** Uses AUMID (Application User Model ID) pattern: `start shell:AppsFolder\{PackageFamilyName}!App`
+- **Method:** Cross-references installed AppX packages with the `GamingServices\GameConfig` registry to identify games. Display names and Application IDs are read from each package's `AppxManifest.xml`.
+- **Launch:** Uses AUMID (Application User Model ID) pattern: `explorer.exe shell:AppsFolder\{PackageFamilyName}!{AppId}`
 - **Filters:** Removes Xbox infrastructure packages (GamingServices, XboxGameBar, XboxIdentityProvider, etc.)
 - **Graceful failure:** If PowerShell is not available or Get-AppxPackage is missing, the source reports as unavailable and discovery continues with other sources
+
+> **Important — AUMID launch details:**
+> Store/Xbox apps must be launched with `explorer.exe shell:AppsFolder\...`, not `start` or `cmd /c start`. The `start` command (both cmd.exe's built-in and PowerShell's `Start-Process`) cannot resolve `shell:` URIs and will fail with "file not found".
+>
+> The Application ID (the part after `!`) is **not** a constant — each game defines its own in `AppxManifest.xml` under `Package > Applications > Application > @Id`. Common values include `Game`, `App`, or game-specific IDs like `AppFrostpunk2Shipping` or `Microsoft.DayoftheTentacleRemastered`. Hardcoding `!App` will silently fail for most games (explorer falls back to opening a generic folder window). Always read the real App ID from the manifest.
+>
+> The correct registry source for installed Xbox games is `HKLM\SOFTWARE\Microsoft\GamingServices\GameConfig` (not `PackageRepository\Root` or `PackageRepository\Package`, which are incomplete). GameConfig entries are full package names (e.g. `Microsoft.Limitless_1.6.34.0_x64__8wekyb3d8bbwe`); extract the base name before the first `_` to match against `Get-AppxPackage`.
 
 #### Program Files (`programfiles`)
 - **Category:** Applications
