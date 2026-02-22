@@ -540,8 +540,8 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 
 	// Check exec format
 	for _, a := range apps {
-		if !strings.HasPrefix(a.Exec, "explorer.exe shell:AppsFolder\\") {
-			t.Errorf("expected exec to start with 'explorer.exe shell:AppsFolder\\', got %q", a.Exec)
+		if !strings.HasPrefix(a.Exec, `start "" "shell:AppsFolder\`) {
+			t.Errorf(`expected exec to start with 'start "" "shell:AppsFolder\', got %q`, a.Exec)
 		}
 		if !strings.Contains(a.Exec, "!App") {
 			t.Errorf("expected exec to contain '!App', got %q", a.Exec)

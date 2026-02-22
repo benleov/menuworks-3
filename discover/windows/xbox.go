@@ -61,7 +61,7 @@ func (s *XboxSource) Discover() ([]discover.DiscoveredApp, error) {
 		aumid := buildAUMID(pkg.PackageFamilyName, "App")
 		apps = append(apps, discover.DiscoveredApp{
 			Name:     name,
-			Exec:     fmt.Sprintf("explorer.exe shell:AppsFolder\\%s", aumid),
+			Exec:     fmt.Sprintf(`start "" "shell:AppsFolder\%s"`, aumid),
 			Source:   "xbox",
 			Category: "Games",
 		})
