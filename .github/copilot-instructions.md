@@ -5,7 +5,7 @@
 - **important** Go is installed in ./bin/go, (e.g bin\go\bin\go) not in PATH. Use that path for all Go commands.
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
-- **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`.
+- **important** Run tests via `\.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `\.\test.ps1 -Packages ./config,./menu`. For discovery tests: `\.\test.ps1 -Packages ./discover,./discover/windows`.
 - Dont use emojis unless needed for clarity. 
 - **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
 - **important** The agent must **NEVER** merge a PR without the user's **explicit approval**. After creating a PR and CI passes, STOP and wait. The user confirming that testing passed is NOT merge approval. Only proceed when the user explicitly says to merge (e.g. "merge it", "go ahead", "approved"). When in doubt, ask.
@@ -370,12 +370,23 @@ The embedded default config in `/assets/` should contain:
 ## Directory Structure
 ```
 /cmd/menuworks/main.go    (entry point, version constant)
+/cmd/menuworks/generate.go (generate subcommand handler)
 /ui/                      (drawing, layout, colors, splash, pop-ups)
 /menu/                    (menu tree, navigation, state, hotkey assignment)
 /config/                  (load, parse, validate, reload)
 /exec/                    (cross-platform command execution, alternate screen)
 /assets/                  (embedded default config + splash)
+/discover/                (application discovery — see DISCOVERY.md)
+/discover/windows/        (Windows-specific discovery sources)
 ```
+
+## Application Discovery (`discover/`)
+
+**See [DISCOVERY.md](../DISCOVERY.md) for full documentation.**
+
+The `discover/` package provides automatic application discovery for generating `config.yaml` files. It is accessed via the `menuworks generate` subcommand.
+
+**Isolation requirement:** The `discover/` package must have **zero imports** from `config/`, `menu/`, `ui/`, or `exec/`. Likewise, those packages must not import `discover/`. The only integration point is `cmd/menuworks/generate.go`. This separation ensures discovery complexity does not leak into the core menu system.
 
 ## Go Technology Requirements
 - Terminal library: **tcell**

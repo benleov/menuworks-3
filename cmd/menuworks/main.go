@@ -21,6 +21,12 @@ import (
 var version string
 
 func main() {
+	// Check for subcommands before entering TUI mode
+	if len(os.Args) > 1 && os.Args[1] == "generate" {
+		runGenerate(os.Args[2:])
+		return
+	}
+
 	// Parse command-line flags
 	configFlag := flag.String("config", "", "Path to config.yaml file (default: same directory as binary)")
 	menuFlag := flag.String("menu", "", "Initial menu to display (default: root menu)")
