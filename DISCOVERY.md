@@ -44,7 +44,7 @@ type Source interface {
 type DiscoveredApp struct {
     Name     string   // display name
     Exec     string   // command to launch (platform-specific)
-    Source   string   // which source found it ("steam", "startmenu", etc.)
+    Source   string   // which source found it ("steam", "Start Menu", "Program Files", etc.)
     Category string   // grouping category
 }
 
@@ -115,6 +115,7 @@ Choose a different `--output` path or remove the existing file first.
 
 #### Start Menu (`startmenu`)
 - **Category:** Applications
+- **Menu label:** `Start Menu`
 - **Scans:** `%ProgramData%\Microsoft\Windows\Start Menu\Programs` and `%APPDATA%\Microsoft\Windows\Start Menu\Programs`
 - **Method:** Resolves `.lnk` shortcut files to extract target executable paths
 - **Filters:** Skips uninstallers, updaters, and documentation shortcuts
@@ -143,6 +144,7 @@ Choose a different `--output` path or remove the existing file first.
 
 #### Program Files (`programfiles`)
 - **Category:** Applications
+- **Menu label:** `Program Files`
 - **Scans:** `C:\Program Files` and `C:\Program Files (x86)`
 - **Method:** Finds `.exe` files in top-level subdirectories (non-recursive beyond one level)
 - **Filters:** Skips uninstallers, updaters, helper executables, DLL hosts
@@ -165,6 +167,10 @@ Planned sources:
 ## Generated Config Format
 
 The generator produces a standard MenuWorks `config.yaml`. When a category (e.g. Games) has apps from multiple sources (e.g. Steam and Xbox), source-based submenus are created automatically. Single-source categories remain flat.
+
+All generated submenus include a `separator` item between the last app entry and the `Back` item.
+
+The `Source` field on each discovered app controls the submenu label used when grouping by source (e.g. `"Start Menu"` → label **Start Menu**, `"Program Files"` → label **Program Files**). This is separate from the source's `Name()` identifier (e.g. `startmenu`, `programfiles`), which is only used for `--sources` filtering and `--list-sources` output.
 
 ### Multi-source example (Games from Steam + Xbox)
 
@@ -201,6 +207,7 @@ menus:
         label: "Notepad++"
         exec:
           windows: "start \"\" \"C:\\Program Files\\Notepad++\\notepad++.exe\""
+      - type: separator
       - type: back
         label: "Back"
   games:
@@ -212,6 +219,7 @@ menus:
       - type: submenu
         label: "Xbox"
         target: "games_xbox"
+      - type: separator
       - type: back
         label: "Back"
   games_steam:
@@ -221,6 +229,7 @@ menus:
         label: "Half-Life 2"
         exec:
           windows: "start steam://rungameid/220"
+      - type: separator
       - type: back
         label: "Back"
   games_xbox:
@@ -230,6 +239,7 @@ menus:
         label: "Minecraft"
         exec:
           windows: "start shell:AppsFolder\\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App"
+      - type: separator
       - type: back
         label: "Back"
 ```
@@ -247,6 +257,7 @@ menus:
         label: "Half-Life 2"
         exec:
           windows: "start steam://rungameid/220"
+      - type: separator
       - type: back
         label: "Back"
 ```
