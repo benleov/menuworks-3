@@ -11,5 +11,6 @@ import (
 func RegisterAll(r *discover.Registry) {
 	r.Register(&StartMenuSource{})
 	r.Register(&SteamSource{})
+	r.Register(&XboxSource{})
 	r.Register(&ProgramFilesSource{})
 }

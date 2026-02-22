@@ -377,7 +377,7 @@ The embedded default config in `/assets/` should contain:
 /exec/                    (cross-platform command execution, alternate screen)
 /assets/                  (embedded default config + splash)
 /discover/                (application discovery — see DISCOVERY.md)
-/discover/windows/        (Windows-specific discovery sources)
+/discover/windows/        (Windows-specific discovery sources: steam, xbox, startmenu, programfiles)
 ```
 
 ## Application Discovery (`discover/`)

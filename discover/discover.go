@@ -164,6 +164,15 @@ func GroupByCategory(apps []DiscoveredApp) map[string][]DiscoveredApp {
 	return groups
 }
 
+// GroupBySource groups apps by their source name.
+func GroupBySource(apps []DiscoveredApp) map[string][]DiscoveredApp {
+	groups := make(map[string][]DiscoveredApp)
+	for _, a := range apps {
+		groups[a.Source] = append(groups[a.Source], a)
+	}
+	return groups
+}
+
 // DeduplicateApps removes duplicate apps, keeping the first occurrence.
 // Deduplicates by exec command (case-insensitive) and by normalized name within the same category.
 func DeduplicateApps(apps []DiscoveredApp) []DiscoveredApp {
