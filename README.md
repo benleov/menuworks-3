@@ -386,7 +386,19 @@ menuworks generate --sources steam,startmenu
 
 # List available discovery sources
 menuworks generate --list-sources
+
+# Merge discovered apps into your own base config
+menuworks generate --base myconfig.yaml --output merged.yaml
+
+# Preview a merge without writing
+menuworks generate --base myconfig.yaml --dry-run
 ```
+
+The `--base` flag lets you provide your own config as a foundation. Discovered apps are
+merged in: your title, theme, items, and menus take priority; generated content fills the gaps.
+
+**Safety:** The generate command will refuse to write if the output file already exists.
+Use a different `--output` path or remove the existing file first.
 
 For full documentation, see [DISCOVERY.md](DISCOVERY.md).
 ### Navigation
