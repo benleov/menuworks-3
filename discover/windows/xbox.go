@@ -58,10 +58,14 @@ func (s *XboxSource) Discover() ([]discover.DiscoveredApp, error) {
 		}
 		seen[name] = true
 
-		aumid := buildAUMID(pkg.PackageFamilyName, "App")
+		appID := pkg.AppID
+		if appID == "" {
+			appID = "App"
+		}
+		aumid := buildAUMID(pkg.PackageFamilyName, appID)
 		apps = append(apps, discover.DiscoveredApp{
 			Name:     name,
-			Exec:     fmt.Sprintf(`start "" "shell:AppsFolder\%s"`, aumid),
+			Exec:     fmt.Sprintf("explorer.exe shell:AppsFolder\\%s", aumid),
 			Source:   "xbox",
 			Category: "Games",
 		})
@@ -86,15 +90,18 @@ if ($gameNames.Count -eq 0) { '[]'; exit 0 }
 $results = @()
 Get-AppxPackage | Where-Object { -not $_.IsFramework -and $gameNames.ContainsKey($_.Name) } | ForEach-Object {
     $dn = ''
+    $aid = 'App'
     $mp = Join-Path $_.InstallLocation 'AppxManifest.xml'
     if (Test-Path $mp) {
         try {
             [xml]$m = Get-Content $mp
             $d = $m.Package.Properties.DisplayName
             if ($d -and $d -notmatch '^ms-resource:') { $dn = $d }
+            $a = $m.Package.Applications.Application
+            if ($a -is [array]) { $aid = $a[0].Id } elseif ($a) { $aid = $a.Id }
         } catch {}
     }
-    $results += [PSCustomObject]@{ Name = $_.Name; PackageFamilyName = $_.PackageFamilyName; DisplayName = $dn }
+    $results += [PSCustomObject]@{ Name = $_.Name; PackageFamilyName = $_.PackageFamilyName; DisplayName = $dn; AppId = $aid }
 }
 if ($results.Count -eq 0) { '[]' } else { $results | ConvertTo-Json -Compress }`
 
@@ -103,6 +110,7 @@ type appxPackage struct {
 	Name              string `json:"Name"`
 	PackageFamilyName string `json:"PackageFamilyName"`
 	DisplayName       string `json:"DisplayName"`
+	AppID             string `json:"AppId"`
 }
 
 // isPowerShellAvailable checks if powershell.exe can be found and the

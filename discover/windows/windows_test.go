@@ -511,8 +511,9 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 	defer func() { runPowerShellCommand = origRunner }()
 
 	// DisplayName provided for Starfield; empty for Minecraft (falls back to cleanPackageName)
+	// AppId varies per game (Game, Minecraft, etc.) — uses manifest values
 	runPowerShellCommand = func(script string) ([]byte, error) {
-		return []byte(`[{"Name":"Bethesda.Starfield","PackageFamilyName":"Bethesda.Starfield_3275kfvn8vcwc","DisplayName":"Starfield"},{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe","DisplayName":""},{"Name":"Microsoft.GamingServices","PackageFamilyName":"Microsoft.GamingServices_abc","DisplayName":""}]`), nil
+		return []byte(`[{"Name":"Bethesda.Starfield","PackageFamilyName":"Bethesda.Starfield_3275kfvn8vcwc","DisplayName":"Starfield","AppId":"Game"},{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe","DisplayName":"","AppId":"Minecraft"},{"Name":"Microsoft.GamingServices","PackageFamilyName":"Microsoft.GamingServices_abc","DisplayName":"","AppId":"App"}]`), nil
 	}
 
 	s := &XboxSource{}
@@ -538,13 +539,13 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 		t.Error("expected 'Minecraft' in results (cleaned from MinecraftUWP)")
 	}
 
-	// Check exec format
+	// Check exec format — uses explorer.exe with correct AppId from manifest
 	for _, a := range apps {
-		if !strings.HasPrefix(a.Exec, `start "" "shell:AppsFolder\`) {
-			t.Errorf(`expected exec to start with 'start "" "shell:AppsFolder\', got %q`, a.Exec)
+		if !strings.HasPrefix(a.Exec, "explorer.exe shell:AppsFolder\\") {
+			t.Errorf("expected exec to start with 'explorer.exe shell:AppsFolder\\', got %q", a.Exec)
 		}
-		if !strings.Contains(a.Exec, "!App") {
-			t.Errorf("expected exec to contain '!App', got %q", a.Exec)
+		if !strings.Contains(a.Exec, "!") {
+			t.Errorf("expected exec to contain '!' (AUMID separator), got %q", a.Exec)
 		}
 		if a.Source != "xbox" {
 			t.Errorf("expected source 'xbox', got %q", a.Source)
@@ -552,6 +553,18 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 		if a.Category != "Games" {
 			t.Errorf("expected category 'Games', got %q", a.Category)
 		}
+	}
+
+	// Verify specific AppIds are used
+	execMap := map[string]string{}
+	for _, a := range apps {
+		execMap[a.Name] = a.Exec
+	}
+	if !strings.HasSuffix(execMap["Starfield"], "!Game") {
+		t.Errorf("Starfield should use !Game AppId, got %q", execMap["Starfield"])
+	}
+	if !strings.HasSuffix(execMap["Minecraft"], "!Minecraft") {
+		t.Errorf("Minecraft should use !Minecraft AppId, got %q", execMap["Minecraft"])
 	}
 }
 
@@ -561,7 +574,7 @@ func TestXboxDiscoverPrefersDisplayName(t *testing.T) {
 
 	// Codenames that would produce bad cleaned names — DisplayName saves us
 	runPowerShellCommand = func(script string) ([]byte, error) {
-		return []byte(`[{"Name":"Microsoft.Limitless","PackageFamilyName":"Microsoft.Limitless_8wekyb3d8bbwe","DisplayName":"Microsoft Flight Simulator 2024"},{"Name":"SEGAofAmericaInc.D0cb6b3aet","PackageFamilyName":"SEGAofAmericaInc.D0cb6b3aet_s751p9cej88mt","DisplayName":"Persona 4 Golden"}]`), nil
+		return []byte(`[{"Name":"Microsoft.Limitless","PackageFamilyName":"Microsoft.Limitless_8wekyb3d8bbwe","DisplayName":"Microsoft Flight Simulator 2024","AppId":"App"},{"Name":"SEGAofAmericaInc.D0cb6b3aet","PackageFamilyName":"SEGAofAmericaInc.D0cb6b3aet_s751p9cej88mt","DisplayName":"Persona 4 Golden","AppId":"Game"}]`), nil
 	}
 
 	s := &XboxSource{}
@@ -627,7 +640,7 @@ func TestXboxDiscoverDeduplicates(t *testing.T) {
 
 	// Same game name appearing twice (different package versions)
 	runPowerShellCommand = func(script string) ([]byte, error) {
-		return []byte(`[{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_abc","DisplayName":"My Game"},{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_def","DisplayName":"My Game"}]`), nil
+		return []byte(`[{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_abc","DisplayName":"My Game","AppId":"Game"},{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_def","DisplayName":"My Game","AppId":"Game"}]`), nil
 	}
 
 	s := &XboxSource{}
