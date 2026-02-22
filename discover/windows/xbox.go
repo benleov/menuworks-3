@@ -48,7 +48,11 @@ func (s *XboxSource) Discover() ([]discover.DiscoveredApp, error) {
 			continue
 		}
 
-		name := cleanPackageName(pkg.Name)
+		// Prefer the display name from the AppxManifest over the coded package name
+		name := pkg.DisplayName
+		if name == "" {
+			name = cleanPackageName(pkg.Name)
+		}
 		if name == "" || seen[name] {
 			continue
 		}
@@ -67,24 +71,38 @@ func (s *XboxSource) Discover() ([]discover.DiscoveredApp, error) {
 }
 
 // xboxDiscoveryScript is the PowerShell command that enumerates Store gaming packages.
-// It cross-references AppxPackage with the GamingServices\PackageRepository\Root
-// registry, which stores PackageFamilyNames (not full package names) of games
-// registered with Xbox/Gaming Services.
+// It reads game package names from GamingServices\GameConfig (which lists all games
+// registered with Xbox/Gaming Services), cross-references them with AppxPackage,
+// and reads the display name from each package's AppxManifest.xml.
 const xboxDiscoveryScript = `$ErrorActionPreference = 'SilentlyContinue'
-$root = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\GamingServices\PackageRepository\Root' 2>$null | Select-Object -ExpandProperty PSChildName 2>$null
-if (-not $root) { '[]'; exit 0 }
-$gamePfns = @{}
-foreach ($r in $root) {
-    if ($r -match '^[A-Za-z]') { $gamePfns[$r] = $true }
+$gc = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\GamingServices\GameConfig' 2>$null | Select-Object -ExpandProperty PSChildName 2>$null
+if (-not $gc) { '[]'; exit 0 }
+$gameNames = @{}
+foreach ($entry in $gc) {
+    $base = ($entry -split '_')[0]
+    if ($base) { $gameNames[$base] = $true }
 }
-if ($gamePfns.Count -eq 0) { '[]'; exit 0 }
-$pkgs = Get-AppxPackage | Where-Object { -not $_.IsFramework -and $gamePfns.ContainsKey($_.PackageFamilyName) } | Select-Object Name, PackageFamilyName | ConvertTo-Json -Compress
-if (-not $pkgs) { '[]' } else { $pkgs }`
+if ($gameNames.Count -eq 0) { '[]'; exit 0 }
+$results = @()
+Get-AppxPackage | Where-Object { -not $_.IsFramework -and $gameNames.ContainsKey($_.Name) } | ForEach-Object {
+    $dn = ''
+    $mp = Join-Path $_.InstallLocation 'AppxManifest.xml'
+    if (Test-Path $mp) {
+        try {
+            [xml]$m = Get-Content $mp
+            $d = $m.Package.Properties.DisplayName
+            if ($d -and $d -notmatch '^ms-resource:') { $dn = $d }
+        } catch {}
+    }
+    $results += [PSCustomObject]@{ Name = $_.Name; PackageFamilyName = $_.PackageFamilyName; DisplayName = $dn }
+}
+if ($results.Count -eq 0) { '[]' } else { $results | ConvertTo-Json -Compress }`
 
 // appxPackage represents the relevant fields from Get-AppxPackage JSON output.
 type appxPackage struct {
 	Name              string `json:"Name"`
 	PackageFamilyName string `json:"PackageFamilyName"`
+	DisplayName       string `json:"DisplayName"`
 }
 
 // isPowerShellAvailable checks if powershell.exe can be found and the

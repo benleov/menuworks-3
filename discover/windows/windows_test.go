@@ -447,7 +447,7 @@ func TestParseAppxJSON(t *testing.T) {
 }
 
 func TestParseAppxJSONFields(t *testing.T) {
-	input := `{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe"}`
+	input := `{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe","DisplayName":"Minecraft"}`
 	pkgs, err := parseAppxJSON([]byte(input))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -460,6 +460,9 @@ func TestParseAppxJSONFields(t *testing.T) {
 	}
 	if pkgs[0].PackageFamilyName != "Microsoft.MinecraftUWP_8wekyb3d8bbwe" {
 		t.Errorf("expected PackageFamilyName, got %q", pkgs[0].PackageFamilyName)
+	}
+	if pkgs[0].DisplayName != "Minecraft" {
+		t.Errorf("expected DisplayName 'Minecraft', got %q", pkgs[0].DisplayName)
 	}
 }
 
@@ -507,8 +510,9 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 	origRunner := runPowerShellCommand
 	defer func() { runPowerShellCommand = origRunner }()
 
+	// DisplayName provided for Starfield; empty for Minecraft (falls back to cleanPackageName)
 	runPowerShellCommand = func(script string) ([]byte, error) {
-		return []byte(`[{"Name":"Bethesda.Starfield","PackageFamilyName":"Bethesda.Starfield_3275kfvn8vcwc"},{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe"},{"Name":"Microsoft.GamingServices","PackageFamilyName":"Microsoft.GamingServices_abc"}]`), nil
+		return []byte(`[{"Name":"Bethesda.Starfield","PackageFamilyName":"Bethesda.Starfield_3275kfvn8vcwc","DisplayName":"Starfield"},{"Name":"Microsoft.MinecraftUWP","PackageFamilyName":"Microsoft.MinecraftUWP_8wekyb3d8bbwe","DisplayName":""},{"Name":"Microsoft.GamingServices","PackageFamilyName":"Microsoft.GamingServices_abc","DisplayName":""}]`), nil
 	}
 
 	s := &XboxSource{}
@@ -522,7 +526,7 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 		t.Fatalf("expected 2 apps (GamingServices filtered), got %d", len(apps))
 	}
 
-	// Check names are cleaned
+	// Check names — Starfield uses DisplayName, Minecraft falls back to cleanPackageName
 	names := map[string]bool{}
 	for _, a := range apps {
 		names[a.Name] = true
@@ -531,7 +535,7 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 		t.Error("expected 'Starfield' in results")
 	}
 	if !names["Minecraft"] {
-		t.Error("expected 'Minecraft' in results")
+		t.Error("expected 'Minecraft' in results (cleaned from MinecraftUWP)")
 	}
 
 	// Check exec format
@@ -548,6 +552,36 @@ func TestXboxDiscoverWithMockPowerShell(t *testing.T) {
 		if a.Category != "Games" {
 			t.Errorf("expected category 'Games', got %q", a.Category)
 		}
+	}
+}
+
+func TestXboxDiscoverPrefersDisplayName(t *testing.T) {
+	origRunner := runPowerShellCommand
+	defer func() { runPowerShellCommand = origRunner }()
+
+	// Codenames that would produce bad cleaned names — DisplayName saves us
+	runPowerShellCommand = func(script string) ([]byte, error) {
+		return []byte(`[{"Name":"Microsoft.Limitless","PackageFamilyName":"Microsoft.Limitless_8wekyb3d8bbwe","DisplayName":"Microsoft Flight Simulator 2024"},{"Name":"SEGAofAmericaInc.D0cb6b3aet","PackageFamilyName":"SEGAofAmericaInc.D0cb6b3aet_s751p9cej88mt","DisplayName":"Persona 4 Golden"}]`), nil
+	}
+
+	s := &XboxSource{}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+	if len(apps) != 2 {
+		t.Fatalf("expected 2 apps, got %d", len(apps))
+	}
+
+	names := map[string]bool{}
+	for _, a := range apps {
+		names[a.Name] = true
+	}
+	if !names["Microsoft Flight Simulator 2024"] {
+		t.Error("expected 'Microsoft Flight Simulator 2024', not the codename 'Limitless'")
+	}
+	if !names["Persona 4 Golden"] {
+		t.Error("expected 'Persona 4 Golden', not the hash 'D0cb6b3aet'")
 	}
 }
 
@@ -593,7 +627,7 @@ func TestXboxDiscoverDeduplicates(t *testing.T) {
 
 	// Same game name appearing twice (different package versions)
 	runPowerShellCommand = func(script string) ([]byte, error) {
-		return []byte(`[{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_abc"},{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_def"}]`), nil
+		return []byte(`[{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_abc","DisplayName":"My Game"},{"Name":"Publisher.MyGame","PackageFamilyName":"Publisher.MyGame_def","DisplayName":"My Game"}]`), nil
 	}
 
 	s := &XboxSource{}
