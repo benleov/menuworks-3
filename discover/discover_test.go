@@ -735,7 +735,7 @@ func TestRenderConfigMultiSourceCategory(t *testing.T) {
 	apps := []DiscoveredApp{
 		{Name: "Half-Life 2", Exec: "start steam://rungameid/220", Source: "steam", Category: "Games"},
 		{Name: "Portal 2", Exec: "start steam://rungameid/620", Source: "steam", Category: "Games"},
-		{Name: "Minecraft", Exec: `start shell:AppsFolder\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App`, Source: "xbox", Category: "Games"},
+		{Name: "Minecraft", Exec: `explorer.exe shell:AppsFolder\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App`, Source: "xbox", Category: "Games"},
 	}
 
 	var buf bytes.Buffer
@@ -899,7 +899,7 @@ func TestEndToEndMultiSourceGames(t *testing.T) {
 		category:  "Games",
 		available: true,
 		apps: []DiscoveredApp{
-			{Name: "Minecraft", Exec: `start shell:AppsFolder\MC!App`, Source: "xbox", Category: "Games"},
+			{Name: "Minecraft", Exec: `explorer.exe shell:AppsFolder\MC!App`, Source: "xbox", Category: "Games"},
 		},
 	})
 	r.Register(&mockSource{
