@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/benworks/menuworks/discover"
 )
 
 // --- Start Menu Filter Tests ---
@@ -651,4 +653,379 @@ func TestXboxDiscoverDeduplicates(t *testing.T) {
 	if len(apps) != 1 {
 		t.Fatalf("expected 1 app after internal dedup, got %d", len(apps))
 	}
+}
+
+// --- CustomDirSource Tests ---
+
+func TestCustomDirSource_Available(t *testing.T) {
+	dir := t.TempDir()
+	s := &CustomDirSource{Dir: dir, MenuName: "Test"}
+	if !s.Available() {
+		t.Error("expected Available() == true for existing directory")
+	}
+
+	s2 := &CustomDirSource{Dir: filepath.Join(dir, "nonexistent"), MenuName: "Test"}
+	if s2.Available() {
+		t.Error("expected Available() == false for missing directory")
+	}
+}
+
+func TestCustomDirSource_Name(t *testing.T) {
+	s := &CustomDirSource{Dir: "C:\\Test", MenuName: "My Tools"}
+	if s.Name() != "customdir:my-tools" {
+		t.Errorf("unexpected Name(): %q", s.Name())
+	}
+}
+
+func TestCustomDirSource_Category(t *testing.T) {
+	s := &CustomDirSource{Dir: "C:\\Test", MenuName: "Utilities"}
+	if s.Category() != "Utilities" {
+		t.Errorf("unexpected Category(): %q", s.Category())
+	}
+}
+
+// Root-level files are all kept, even those whose names look like arch variants.
+// (Each file in the root is assumed to be a distinct standalone tool.)
+func TestCustomDirSource_Discover_RootLevelKeepsAll(t *testing.T) {
+	dir := t.TempDir()
+
+	for _, name := range []string{"putty.exe", "puttygen.exe", "pagent.exe", "WinSCP.exe", "rufus-4.12.exe"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// These should be filtered by the existing isFilteredExecutable filter.
+	for _, name := range []string{"uninstall.exe", "setup.exe"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Utilities"}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	want := map[string]bool{"putty": true, "puttygen": true, "pagent": true, "WinSCP": true, "rufus-4.12": true}
+	if len(apps) != len(want) {
+		t.Fatalf("expected %d apps, got %d: %v", len(want), len(apps), appNames(apps))
+	}
+	for _, a := range apps {
+		if !want[a.Name] {
+			t.Errorf("unexpected app name: %q", a.Name)
+		}
+	}
+}
+
+// Files inside a subdirectory are deduplicated: only one representative is kept.
+// The display name is the relative path from the scan root (subdir\binary).
+func TestCustomDirSource_Discover_SubdirDeduplication(t *testing.T) {
+	dir := t.TempDir()
+
+	// Simulate a TCPView-style directory: main exe + arch/console variants.
+	tcpDir := filepath.Join(dir, "TCPView")
+	if err := os.Mkdir(tcpDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"tcpview.exe", "tcpview64.exe", "tcpview64a.exe", "tcpvcon.exe", "tcpvcon64.exe", "tcpvcon64a.exe"} {
+		if err := os.WriteFile(filepath.Join(tcpDir, name), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Utilities"}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	if len(apps) != 1 {
+		t.Fatalf("expected 1 app from subdirectory (arch variants deduplicated), got %d: %v", len(apps), appNames(apps))
+	}
+	// Name should be relative path: TCPView\tcpview
+	wantName := filepath.Join("TCPView", "tcpview")
+	if apps[0].Name != wantName {
+		t.Errorf("expected name %q, got %q", wantName, apps[0].Name)
+	}
+}
+
+// Root-level exes and subdirectory exes coexist correctly.
+// Subdirectory exe names include the relative path prefix.
+func TestCustomDirSource_Discover_MixedRootAndSubdir(t *testing.T) {
+	dir := t.TempDir()
+
+	// Root-level tools (all kept, name = just binary)
+	for _, name := range []string{"toplevel.exe", "another.exe"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Subdirectory with variants (only main kept, name = subdir\binary)
+	sub := filepath.Join(dir, "toolbox")
+	if err := os.Mkdir(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"toolbox.exe", "toolbox64.exe", "toolboxcmd.exe"} {
+		if err := os.WriteFile(filepath.Join(sub, name), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Tools"}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	// 2 root-level + 1 from subdirectory = 3 total
+	if len(apps) != 3 {
+		t.Fatalf("expected 3 apps, got %d: %v", len(apps), appNames(apps))
+	}
+
+	names := make(map[string]bool)
+	for _, a := range apps {
+		names[a.Name] = true
+	}
+	wantSubdir := filepath.Join("toolbox", "toolbox")
+	if !names["toplevel"] || !names["another"] || !names[wantSubdir] {
+		t.Errorf("unexpected names: %v", appNames(apps))
+	}
+}
+
+func TestCustomDirSource_Discover_SpaceInPath(t *testing.T) {
+	dir := t.TempDir()
+	spaceDir := filepath.Join(dir, "my tools")
+	if err := os.Mkdir(spaceDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(spaceDir, "neat.exe"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Tools"}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+	if len(apps) != 1 {
+		t.Fatalf("expected 1 app, got %d", len(apps))
+	}
+	if !strings.HasPrefix(apps[0].Exec, `"`) || !strings.HasSuffix(apps[0].Exec, `"`) {
+		t.Errorf("expected quoted exec path for path with spaces, got %q", apps[0].Exec)
+	}
+}
+
+func TestCustomDirSource_Exclude(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"rufus-4.12.exe", "rufus-3.99.exe", "putty.exe"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Utilities", Exclude: []string{"rufus*"}}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	if len(apps) != 1 || apps[0].Name != "putty" {
+		t.Fatalf("expected only putty after Exclude filter, got %v", appNames(apps))
+	}
+}
+
+// --- isArchDirName / collapseArchDirs / cleanRelPath Tests ---
+
+func TestIsArchDirName(t *testing.T) {
+	archNames := []string{"x64", "x86", "arm", "arm64", "amd64", "win32", "win64", "i386", "i686"}
+	for _, n := range archNames {
+		if !isArchDirName(n) {
+			t.Errorf("expected isArchDirName(%q) == true", n)
+		}
+	}
+	notArch := []string{"TCPView", "toolbox", "bin", "lib", "app", "WinDirStat"}
+	for _, n := range notArch {
+		if isArchDirName(strings.ToLower(n)) {
+			t.Errorf("expected isArchDirName(%q) == false", strings.ToLower(n))
+		}
+	}
+}
+
+func TestCleanRelPath(t *testing.T) {
+	sep := string(filepath.Separator)
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"putty", "putty"},
+		{"TCPView" + sep + "tcpview", "TCPView" + sep + "tcpview"},
+		{"WinDirStat" + sep + "x64" + sep + "windirstat", "WinDirStat" + sep + "windirstat"},
+		{"WinDirStat" + sep + "arm64" + sep + "windirstat", "WinDirStat" + sep + "windirstat"},
+		{"app" + sep + "x86" + sep + "sub" + sep + "tool", "app" + sep + "sub" + sep + "tool"},
+	}
+	for _, tt := range tests {
+		got := cleanRelPath(tt.input)
+		if got != tt.want {
+			t.Errorf("cleanRelPath(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+// WinDirStat-style: multiple arch-named subdirs, only the best arch is kept.
+func TestCustomDirSource_Discover_ArchDirCollapse(t *testing.T) {
+	dir := t.TempDir()
+
+	wdDir := filepath.Join(dir, "WinDirStat")
+	if err := os.Mkdir(wdDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, arch := range []string{"arm", "x64", "x86", "arm64"} {
+		archDir := filepath.Join(wdDir, arch)
+		if err := os.Mkdir(archDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(archDir, "windirstat.exe"), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Utilities"}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	if len(apps) != 1 {
+		t.Fatalf("expected 1 app (arch dirs collapsed), got %d: %v", len(apps), appNames(apps))
+	}
+	// Should prefer x64 and strip the arch component from the name.
+	wantName := filepath.Join("WinDirStat", "windirstat")
+	if apps[0].Name != wantName {
+		t.Errorf("expected name %q, got %q", wantName, apps[0].Name)
+	}
+	// Exec should point to the x64 binary.
+	if !strings.Contains(apps[0].Exec, "x64") {
+		t.Errorf("expected exec to point to x64 binary, got %q", apps[0].Exec)
+	}
+}
+
+// Mixed: arch-dir app sits alongside a normal-subdir app and root-level tools.
+func TestCustomDirSource_Discover_ArchDirMixed(t *testing.T) {
+	dir := t.TempDir()
+
+	// Root-level standalone tool
+	if err := os.WriteFile(filepath.Join(dir, "putty.exe"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Normal subdirectory (should NOT be collapsed)
+	tcpDir := filepath.Join(dir, "TCPView")
+	if err := os.Mkdir(tcpDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tcpDir, "tcpview.exe"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Arch-subdirectory app
+	wdDir := filepath.Join(dir, "WinDirStat")
+	if err := os.Mkdir(wdDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, arch := range []string{"x64", "x86"} {
+		archDir := filepath.Join(wdDir, arch)
+		if err := os.Mkdir(archDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(archDir, "windirstat.exe"), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := &CustomDirSource{Dir: dir, MenuName: "Utilities"}
+	apps, err := s.Discover()
+	if err != nil {
+		t.Fatalf("Discover failed: %v", err)
+	}
+
+	// putty + TCPView\tcpview + WinDirStat\windirstat = 3
+	if len(apps) != 3 {
+		t.Fatalf("expected 3 apps, got %d: %v", len(apps), appNames(apps))
+	}
+	names := make(map[string]bool)
+	for _, a := range apps {
+		names[a.Name] = true
+	}
+	wantTCP := filepath.Join("TCPView", "tcpview")
+	wantWDS := filepath.Join("WinDirStat", "windirstat")
+	if !names["putty"] || !names[wantTCP] || !names[wantWDS] {
+		t.Errorf("unexpected app names: %v", appNames(apps))
+	}
+}
+
+func TestIsArchVariant(t *testing.T) {
+	tests := []struct {
+		base     string
+		expected bool
+	}{
+		{"tcpview64", true},
+		{"tcpview64a", true},
+		{"tcpvcon", true},
+		{"app_x64", true},
+		{"app_x86", true},
+		{"app_64", true},
+		{"app_32", true},
+		{"appcmd", true},
+		{"appcli", true},
+		{"tcpview", false},
+		{"putty", false},
+		{"rufus-4.12", false}, // version numbers should not be flagged
+		{"WinSCP", false},
+	}
+	for _, tt := range tests {
+		got := isArchVariant(strings.ToLower(tt.base))
+		if got != tt.expected {
+			t.Errorf("isArchVariant(%q) = %v, want %v", tt.base, got, tt.expected)
+		}
+	}
+}
+
+func TestPickMainExe(t *testing.T) {
+	tests := []struct {
+		name string
+		input []string
+		want string // just the filename, not full path
+	}{
+		{
+			name:  "picks non-variant over variant",
+			input: []string{`C:\t\tcpview64.exe`, `C:\t\tcpview.exe`, `C:\t\tcpvcon.exe`},
+			want:  "tcpview.exe",
+		},
+		{
+			name:  "picks shortest when multiple non-variants",
+			input: []string{`C:\t\myapp.exe`, `C:\t\myapp-extra.exe`},
+			want:  "myapp.exe",
+		},
+		{
+			name:  "falls back to shortest when all are variants",
+			input: []string{`C:\t\app64.exe`, `C:\t\app_x64.exe`},
+			want:  "app64.exe",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := filepath.Base(pickMainExe(tt.input))
+			if got != tt.want {
+				t.Errorf("pickMainExe = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// appNames returns the Name field of each DiscoveredApp for use in test error messages.
+func appNames(apps []discover.DiscoveredApp) []string {
+	names := make([]string, len(apps))
+	for i, a := range apps {
+		names[i] = a.Name
+	}
+	return names
 }

@@ -397,6 +397,23 @@ menuworks generate --base myconfig.yaml --dry-run
 The `--base` flag lets you provide your own config as a foundation. Discovered apps are
 merged in: your title, theme, items, and menus take priority; generated content fills the gaps.
 
+You can also declare **custom directories** to scan by adding a `discover:` block to your base config:
+
+```yaml
+discover:
+  dirs:
+    - dir: "F:\\Utilities"
+      name: "Utilities"
+    - dir: "C:\\Tools"
+      name: "My Tools"
+      exclude:
+        - "*64*"   # skip 64-bit variants
+```
+
+Each directory produces its own named submenu. Root-level `.exe` files are all kept (e.g. `putty.exe`, `WinSCP.exe`). Inside subdirectories, architecture variants are automatically deduplicated — `tcpview.exe` is chosen over `tcpview64.exe`, and `WinDirStat/x64/` is preferred over `WinDirStat/arm/`. Menu item names include the relative path, e.g. `TCPView\tcpview`.
+
+The `discover:` key is silently ignored by the TUI at runtime, so the same file can serve as both your base config and your scan spec.
+
 **Safety:** The generate command will refuse to write if the output file already exists.
 Use a different `--output` path or remove the existing file first.
 

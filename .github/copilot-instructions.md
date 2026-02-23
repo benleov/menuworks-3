@@ -12,6 +12,7 @@
 - **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
 - **important** The agent must **NEVER** merge a PR without the user's **explicit approval**. After creating a PR and CI passes, STOP and wait. The user confirming that testing passed is NOT merge approval. Only proceed when the user explicitly says to merge (e.g. "merge it", "go ahead", "approved"). When in doubt, ask.
 - **important** Ensure that destructive operations (e.g overwriting or deleting files) are only performed after explicit user confirmation.
+**important** Ensure that code, commit messages and PR titles and descriptions do not contain sensitive or personally identifiable information.
 
 ## Automated Agent-Driven Release Workflow
 
