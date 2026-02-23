@@ -17,13 +17,18 @@ The discovery system lives entirely in the `discover/` package tree and is **com
 ```
 discover/
     discover.go              # Core types: Source, DiscoveredApp, Category, Registry
+    discoverconfig.go        # DiscoverConfig / DirEntry — reads discover: block from base YAML
     writer.go                # Generates config.yaml from discovered apps
     discover_test.go         # Core tests (registry, writer)
+    discoverconfig_test.go   # ParseDiscoverConfig tests
     windows/
         startmenu.go         # Start Menu shortcut (.lnk) discovery
         steam.go             # Steam library manifest parsing
         xbox.go              # Xbox / Microsoft Store game discovery
         programfiles.go      # Program Files .exe scanning
+        customdir.go         # User-specified directory scanning
+        register.go          # RegisterAll + RegisterCustomDirs (Windows)
+        register_other.go    # Stubs for non-Windows builds
         windows_test.go      # Windows source tests
     linux/                   # (future)
     darwin/                  # (future)
@@ -341,3 +346,114 @@ func (s *MySource) Discover() ([]discover.DiscoveredApp, error) {
     // Scan and return discovered apps
 }
 ```
+
+## Custom Directories
+
+You can instruct the `generate` command to scan arbitrary directories for `.exe`
+files by adding a `discover:` block to your `--base` config file. This avoids
+the need for any extra CLI flags — the same file acts as both the base config
+and the scan specification.
+
+> **Note:** The `discover:` key is silently ignored by the TUI at runtime
+> (`yaml.v3` drops unknown top-level keys), so the same file can be used
+> directly as your `config.yaml` without any changes.
+
+### Schema
+
+```yaml
+discover:
+  dirs:
+    - dir: "F:\\Utilities"
+      name: "Utilities"
+    - dir: "C:\\My Tools"
+      name: "My Tools"
+      exclude:
+        - "*64*"
+        - "oldtool*"
+```
+
+| Field | Required | Description |
+|-------|----------|--------------|
+| `dir` | yes | Absolute path to the directory to scan |
+| `name` | yes | Display label used as the submenu title in the generated config |
+| `exclude` | no | List of glob patterns matched against the `.exe` filename (case-insensitive). Matching files are skipped. |
+
+### Display Names
+
+Each menu item label is the path relative to the scan root, with `.exe` stripped:
+
+| File path | Display name |
+|---|---|
+| `F:\Utilities\putty.exe` | `putty` |
+| `F:\Utilities\TCPView\tcpview.exe` | `TCPView\tcpview` |
+| `F:\Utilities\WinDirStat\x64\windirstat.exe` | `WinDirStat\windirstat` |
+
+### Deduplication Heuristics
+
+Custom directory scanning applies two passes to avoid duplicate entries:
+
+#### Pass 1 — Root vs subdirectory
+
+- **Root-level** `.exe` files (directly inside `dir`) are **all kept** — each is assumed to be a distinct standalone tool. Example: `putty.exe`, `puttygen.exe`, `pagent.exe`, `WinSCP.exe`, `rufus-4.12.exe` all become separate menu entries.
+- **Subdirectory** `.exe` files are grouped by their immediate parent directory. When a subdirectory contains more than one candidate, a single representative is selected using the arch-suffix heuristic below.
+
+#### Pass 2 — Arch-suffix heuristic (per subdirectory)
+
+Within a subdirectory, executables whose names end in an architecture suffix are treated as variants and deprioritised. The shortest non-variant name is selected.
+
+Filtered suffixes: `64`, `32`, `64a`, `86`, `x64`, `x86`, `_x64`, `_x86`, `_64`, `_32`, `con`, `cmd`, `cli`
+
+Example — `TCPView/` contains `tcpview.exe`, `tcpview64.exe`, `tcpview64a.exe`, `tcpvcon.exe`, `tcpvcon64.exe` → selects **`tcpview.exe`**.
+
+#### Pass 3 — Arch-directory collapse
+
+When all sibling subdirectories of a common parent are named after CPU architectures (e.g. `x64`, `x86`, `arm64`, `arm`), they are collapsed into a single entry. The executable from the most-preferred architecture is chosen:
+
+**Preference order:** `x64` / `amd64` > `win64` > `x86` / `win32` / `i386` > `arm64` > `arm`
+
+The arch directory component is stripped from the display name.
+
+Example — `WinDirStat/` contains `arm/`, `x64/`, `x86/`, `arm64/`, each with `windirstat.exe` → selects **`WinDirStat/x64/windirstat.exe`**, displayed as **`WinDirStat\windirstat`**.
+
+This collapse only triggers when **all** child directories with executables are arch-named. A `WinDirStat/tools/` subdirectory alongside `WinDirStat/x64/` would prevent collapsing.
+
+### Filtering
+
+All executables pass through the shared noise filter before deduplication. Files are excluded if their name contains:
+`unins`, `uninst`, `uninstall`, `remove`, `update`, `updater`, `setup`, `install`, `installer`, `helper`, `crash`, `reporter`, `diagnostic`, `daemon`, `service`, `svc`, `cli`, `cmd`
+
+Or if they match any `exclude` glob pattern defined for the directory entry.
+
+### Example
+
+Given a base file `base.yaml`:
+
+```yaml
+title: "My MenuWorks"
+theme: "dark"
+
+discover:
+  dirs:
+    - dir: "F:\\Utilities"
+      name: "Utilities"
+    - dir: "F:\\Games\\Tools"
+      name: "Game Tools"
+      exclude:
+        - "*_old*"
+        - "benchmark*"
+
+items:
+  - type: back
+    label: "Quit"
+```
+
+Run:
+
+```
+menuworks generate --base base.yaml --dry-run
+```
+
+The output will contain:
+- A `Utilities` submenu with all non-filtered executables from `F:\Utilities`
+- A `Game Tools` submenu with executables from `F:\Games\Tools`, excluding anything matching `*_old*` or `benchmark*`
+- Both merged with any existing items already defined in `base.yaml`

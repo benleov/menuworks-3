@@ -71,6 +71,17 @@ func runGenerate(args []string) {
 		}
 	}
 
+	// Register any custom directory sources declared in the base config.
+	if baseYAML != nil {
+		discoverCfg, err := discover.ParseDiscoverConfig(baseYAML)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not parse discover block in base config: %v\n", err)
+		} else if len(discoverCfg.Dirs) > 0 {
+			discoverwin.RegisterCustomDirs(registry, discoverCfg.Dirs)
+			fmt.Fprintf(os.Stderr, "Custom directories: %d configured\n", len(discoverCfg.Dirs))
+		}
+	}
+
 	// Parse source filter
 	var sourceNames []string
 	if *sources != "" {

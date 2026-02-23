@@ -11,3 +11,8 @@ import (
 func RegisterAll(r *discover.Registry) {
 	// No Windows sources available on this platform
 }
+
+// RegisterCustomDirs is a no-op on non-Windows platforms.
+func RegisterCustomDirs(r *discover.Registry, dirs []discover.DirEntry) {
+	// No custom dir scanning available on this platform
+}
