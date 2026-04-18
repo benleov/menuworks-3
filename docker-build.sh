@@ -79,7 +79,7 @@ for output in "${!TARGETS[@]}"; do
     if [ $? -eq 0 ]; then
         SIZE=$(du -h "dist/$output" | cut -f1)
         echo "  OK $output ($SIZE)"
-        ((SUCCESS_COUNT++))
+        ((SUCCESS_COUNT++)) || true
     else
         echo "  FAIL $output"
     fi
