@@ -31,6 +31,18 @@ func main() {
 	configFlag := flag.String("config", "", "Path to config.yaml file (default: same directory as binary)")
 	menuFlag := flag.String("menu", "", "Initial menu to display (default: root menu)")
 	noSplashFlag := flag.Bool("no-splash", false, "Skip the splash screen on startup")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [flags]\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "       %s generate [flags]\n\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "A retro TUI menu system with hierarchical menus and menu chaining.\n\n")
+		fmt.Fprintf(os.Stderr, "Flags:\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nSubcommands:\n")
+		fmt.Fprintf(os.Stderr, "  generate    Discover installed applications and generate a config.yaml file\n")
+		fmt.Fprintf(os.Stderr, "\nRun '%s generate --help' for generate-specific flags.\n", filepath.Base(os.Args[0]))
+	}
+
 	flag.Parse()
 
 	// Determine config path and whether auto-creation is allowed
