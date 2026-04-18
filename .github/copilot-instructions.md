@@ -8,6 +8,7 @@
 - **important** This is developed on windows using powershell; the commands `head`, `ls`, `tail etc are not available. 
 - **important** Build via `.\build.ps1 -Target windows -Version (Get-Content VERSION)` on windows.
 - **important** Run tests via `.\test.ps1` (defaults to `./config` and `./menu`), or pass packages: `.\test.ps1 -Packages ./config,./menu`. For discovery tests: `\.\test.ps1 -Packages ./discover,./discover/windows`.
+- **important** On Linux/macOS (or without local Go), use Docker: build via `./docker-build.sh` (or `./docker-build.sh linux`), run tests via `./docker-test.sh` (or `./docker-test.sh ./config ./menu ./discover`). Requires Docker only, no local Go installation.
 - Dont use emojis unless needed for clarity. 
 - **important** The user may incorrectly specify `master` branch instead of `main`. Always use `main`.
 - **important** The agent must **NEVER** merge a PR without the user's **explicit approval**. After creating a PR and CI passes, STOP and wait. The user confirming that testing passed is NOT merge approval. Only proceed when the user explicitly says to merge (e.g. "merge it", "go ahead", "approved"). When in doubt, ask.
@@ -32,8 +33,8 @@ The agent (GitHub Copilot) manages the entire release process:
    - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
 
 2. **Testing & Validation:**
-   - Agent runs: `.\test.ps1`
-   - Agent builds: `.\build.ps1 -Target windows -Version (Get-Content VERSION)`
+   - Agent runs: `.\test.ps1` (Windows) or `./docker-test.sh` (Linux/macOS/Docker)
+   - Agent builds: `.\build.ps1 -Target windows -Version (Get-Content VERSION)` (Windows) or `./docker-build.sh` (Linux/macOS/Docker)
    - User performs manual testing and approves
 
 3. **Release Process (Agent-Automated):**
