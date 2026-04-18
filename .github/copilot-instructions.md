@@ -383,6 +383,7 @@ The embedded default config in `/assets/` should contain:
 /assets/                  (embedded default config + splash)
 /discover/                (application discovery — see DISCOVERY.md)
 /discover/windows/        (Windows-specific discovery sources: steam, xbox, startmenu, programfiles)
+/discover/linux/          (Linux-specific discovery sources: desktop, steam, flatpak, snap)
 ```
 
 ## Application Discovery (`discover/`)
