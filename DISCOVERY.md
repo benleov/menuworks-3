@@ -30,7 +30,14 @@ discover/
         register.go          # RegisterAll + RegisterCustomDirs (Windows)
         register_other.go    # Stubs for non-Windows builds
         windows_test.go      # Windows source tests
-    linux/                   # (future)
+    linux/
+        desktop.go           # XDG .desktop file discovery
+        steam.go             # Steam library manifest parsing (Linux paths)
+        flatpak.go           # Flatpak application discovery
+        snap.go              # Snap package discovery
+        register.go          # RegisterAll (Linux)
+        register_other.go    # Stubs for non-Linux builds
+        linux_test.go        # Linux source tests
     darwin/                  # (future)
 ```
 
@@ -154,13 +161,36 @@ Choose a different `--output` path or remove the existing file first.
 - **Method:** Finds `.exe` files in top-level subdirectories (non-recursive beyond one level)
 - **Filters:** Skips uninstallers, updaters, helper executables, DLL hosts
 
-### Linux (Future)
+### Linux
 
-Planned sources:
-- **Desktop entries** (`.desktop` files in XDG directories)
-- **Flatpak** applications
-- **Snap** packages
-- **Steam** (Linux variant)
+#### Desktop Entries (`desktop`)
+- **Category:** Applications
+- **Scans:** `/usr/share/applications`, `/usr/local/share/applications`, `~/.local/share/applications`, and directories listed in `$XDG_DATA_DIRS`
+- **Method:** Parses `.desktop` files following the XDG Desktop Entry specification
+- **Filters:** Skips entries with `NoDisplay=true`, `Hidden=true`, `Terminal=true`, or `Type` other than `Application`. Removes XDG field codes (`%u`, `%F`, etc.) from Exec lines
+- **Launch:** Uses the `Exec` field from the `.desktop` file
+
+#### Steam (`steam`)
+- **Category:** Games
+- **Scans:** `~/.steam/steam` and `~/.local/share/Steam`
+- **Method:** Parses Valve's VDF format (`libraryfolders.vdf` and `appmanifest_*.acf`) to find installed games
+- **Launch:** Uses `steam steam://rungameid/<appid>`
+- **Filters:** Skips Proton, Steam Linux Runtime, redistributables, and other non-game entries
+
+#### Flatpak (`flatpak`)
+- **Category:** Applications
+- **Requires:** `flatpak` command available in PATH
+- **Method:** Runs `flatpak list --app --columns=application,name` to enumerate installed Flatpak applications (excludes runtimes)
+- **Launch:** Uses `flatpak run <application-id>`
+- **Graceful failure:** If `flatpak` is not installed, the source reports as unavailable and discovery continues with other sources
+
+#### Snap (`snap`)
+- **Category:** Applications
+- **Requires:** `snap` command available in PATH
+- **Method:** Runs `snap list` and parses the output
+- **Launch:** Uses `snap run <name>`
+- **Filters:** Skips system/core snaps (`core22`, `snapd`, `bare`, `gtk-common-themes`, GNOME platform snaps, etc.)
+- **Graceful failure:** If `snap` is not installed, the source reports as unavailable and discovery continues with other sources
 
 ### macOS (Future)
 

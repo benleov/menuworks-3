@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/benworks/menuworks/discover"
+	discoverlinux "github.com/benworks/menuworks/discover/linux"
 	discoverwin "github.com/benworks/menuworks/discover/windows"
 )
 
@@ -30,6 +31,7 @@ func runGenerate(args []string) {
 	// Build registry with platform sources
 	registry := discover.NewRegistry()
 	discoverwin.RegisterAll(registry)
+	discoverlinux.RegisterAll(registry)
 
 	// List sources mode
 	if *listSources {
